@@ -145,7 +145,7 @@
 	update_screen()
 	push_helm_frame()
 	// One tile crossed is one steering decision. There is no sub-tile position to
-	// steer with in between (see ship_autopilot.dm).
+	// steer with in between (see autopilot.dm).
 	if(autopilot_engaged)
 		autopilot_steer()
 

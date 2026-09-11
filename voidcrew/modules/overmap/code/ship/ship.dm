@@ -299,7 +299,7 @@
 	surveyed_tiles = null
 	QDEL_NULL(combat_alarm)
 	// A destroyed or despawned hull stops calling for help: drops the repeat
-	// timer, the Wideband transmitter and the sprite filter (ship_distress.dm).
+	// timer, the Wideband transmitter and the sprite filter (distress.dm).
 	clear_distress_beacon()
 	// Clean up processing (thrust and/or shields)
 	burn_direction = BURN_NONE
@@ -435,7 +435,7 @@
 		return get_turf(shuttle)
 	return null
 
-// ship_broadcast_runechat() moved to ship_transmissions.dm. It used to paint a
+// ship_broadcast_runechat() moved to transmissions.dm. It used to paint a
 // maptext overlay onto this atom for the helm's camera map to render; that camera
 // is gone, so the overlay had no renderer and hails were invisible to everyone.
 // Transmissions are data the helm reads now.
@@ -541,7 +541,7 @@
 	RegisterSignal(attacker, COMSIG_QDELETING, PROC_REF(on_attacker_deleted))
 
 	// Nobody should be flying a plotted course while someone has a firing solution
-	// on them (see ship_autopilot.dm).
+	// on them (see autopilot.dm).
 	interrupt_autopilot("weapons lock detected")
 
 	// Start the combat alarm if this is the first lock
