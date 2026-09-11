@@ -202,7 +202,48 @@ zone-transition hold.
    не должны дёргать act(); только чтение.
 6. Старые комментарии-ссылки в TS на `ship_*.dm` обновить на новые пути в ходе переноса.
 
-## 5. Полезные пути
+## 5. Фаза 2 (согласована идея, не начата): зум/пан превью корабля в ShipUpgradeSelector
+
+Идея пользователя: в окне выбора корабля/апгрейдов сделать НЕ статичную картинку,
+а интерактивную (зумить и двигать) — на том же HelmPlane.
+
+ЦЕЛЬ (уточнено пользователем): это НЕ карта флота в ShipJoinMenu. Это `ShipPreview`
+в shipyard-окне, в которое уводит `ShipJoinMenu` кнопкой «Open Shipyard»:
+- клиент: `tgui/packages/tgui/interfaces/ShipUpgradeSelector.tsx` (1452 строк),
+  компонент `ShipPreview` (строка ~1110): композит hull-PNG + module-PNG по
+  slot-маркерам с connector-выравниванием; сейчас только fit-to-container, без зума;
+- ассеты уже есть: `voidcrew/modules/ship_upgrades/ship_preview_assets.dm`
+  (`/datum/asset/simple/ship_previews`), манифест
+  `voidcrew/modules/ship_upgrades/previews/manifest.json`
+  (`tile_px: 32`, hulls{png,width,height,slots{key:[tx,ty]}}, modules{png,w,h,connector,themes}) —
+  259 png, генерация `tools/ship_previews/generate_ship_previews.py` (перезапускать после правки DMM);
+- `ui_data["preview"]` уже отдаёт весь манифест клиенту — DM-менять ничего не нужно.
+
+Имплементация (после шага 1 — нужен готовый `interfaces/common/HelmPlane.tsx`):
+1. Заменить статичный div `ShipPreview` на HelmPlane: map-space = `hull.width*tile_px × hull.height*tile_px` px,
+   фон-слой = `<img src={resolveAsset(hull.png)} style={{imageRendering:'pixelated'}}>`.
+2. Module-оверлеи оставить `<img>` в map-space (масштабируются вместе с картой — это и нужно,
+   карта = сам корабль; НЕ KeepScale). Перевод % → px по tile_px.
+3. Slot-маркеры (пунктирная рамка + label) → ноды HelmPlane: рамка в map-space,
+   label через KeepScale (читаем при любом зуме). Клик по ноде = выбрать этот слот
+   в сайдбаре (или открыть пикер модулей слота).
+4. Начальный зум = fit (как сейчас), minZoom=fit/2, maxZoom ≈ 3 (1 тайл крупно);
+   MiniMap = весь корабль целиком (~150px) — маленький, но даёт «где я» на больших халлах.
+5. Hover-превью модулей/темов (текущий функционал `hoverModule`/`hoverTheme`) сохранить 1-в-1.
+6. Окно: с plane можно вернуть фиксированную ширину поменьше (зум решает проблему места) —
+   не обязательно 1200×900 при превью; проверить компановку.
+
+Побочный бонус: тот же HelmPlane затем идёт в Helm/Chart (шаг 2) — превью корабля
+это первый потребитель и обкатка компонента.
+
+## 6. Полезные пути
+
+- Shipyard-выбор корабля: `tgui/packages/tgui/interfaces/ShipUpgradeSelector.tsx` (компонент `ShipPreview`)
+  + `voidcrew/modules/ship_upgrades/ship_upgrade_selector.dm` + `ship_preview_assets.dm`
+  + `voidcrew/modules/ship_upgrades/previews/manifest.json` (tile_px/slots/connector) +
+  `tools/ship_previews/generate_ship_previews.py`
+- Join-меню (список без картинок, вход в shipyard): `tgui/packages/tgui/interfaces/ShipJoinMenu.tsx`
+  + `voidcrew/edits/mobs/ship_join_menu.dm`
 - Фейсплейт-арт (удалить): `voidcrew/modules/shuttle/helm/helm_faceplate.png`
 - Текущий UI: `tgui/packages/voidcrew_tgui/interfaces/HelmComputer.tsx`
 - Текущий scss (удалить): `tgui/packages/tgui/styles/interfaces/HelmComputer.scss` (1898 строк)
