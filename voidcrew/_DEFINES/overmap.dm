@@ -98,6 +98,16 @@
 /// Fraction of max_speed at or below which the helm's Dock button finishes the stop itself; any faster and the approach is refused.
 #define DOCK_ASSIST_SPEED_FRACTION 0.5
 
+/// Speed multiplier for external effects like interdiction (1 = normal, 0.5 = half speed)
+#define SHIP_SPEED_MULTIPLIER_DEFAULT 1
+
+/// Burn direction constants for the throttle system. They live here rather than beside
+/// the burn procs (ship/movement.dm) because the helm, the autopilot and the EW payloads
+/// all speak them too, and a file-local define was going out of scope before them - see
+/// the SHIP_VIEW_RANGE note above for how that story ends.
+#define BURN_NONE 0
+#define BURN_STOP -1
+
 /**
  * Hull integrity states.
  *
