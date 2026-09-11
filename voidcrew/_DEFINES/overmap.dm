@@ -16,7 +16,7 @@
  * old camera console rendered with view(SHIP_VIEW_RANGE). Everything physically
  * inside it draws on the helm chart with no research and no scanning.
  *
- * Deliberately distinct from the ship's SENSOR range (ship_sensors.dm), which
+ * Deliberately distinct from the ship's SENSOR range (ship/sensors.dm), which
  * starts equal to this and grows with the radar research tree. Sensors do not
  * widen what the crew can see. They reach past sight, so a scan can chart
  * things into the waypoint list that were never visible. Keep the two apart:
@@ -29,7 +29,7 @@
 
 /// Longest distress-beacon message the helm will accept and repeat on Wideband.
 /// Lives here rather than beside the beacon because the console's text prompt caps
-/// the input and the ship caps the stored text (see ship_distress.dm).
+/// the input and the ship caps the stored text (see ship/distress.dm).
 #define DISTRESS_MESSAGE_MAX_LEN 140
 
 /// Longest message on a crew application, and on the reason sent back with a denial
@@ -226,13 +226,13 @@
 #define EVENT_FIELD_BLOB_RADIUS_MAX 9
 /// Target fraction of a hazard field's rock turfs that should bear ore after seeding - denser
 /// than the old lone asteroid signal's ratio (~20%) since reaching this rock means flying
-/// through live meteor traffic first (see ship_damage.dm apply_meteor_damage)
+/// through live meteor traffic first (see ship/damage.dm apply_meteor_damage)
 #define EVENT_FIELD_ORE_TARGET_RATIO 0.3
 
 // Overmap parallax themes - what a crew sees out the windows while their ship sits
 // over (or inside) an overmap object. Themes are applied by the context-parallax
 // system (see "Context-aware overmap parallax" in
-// voidcrew/modules/overmap/code/modules/overmap/_overmap.dm): add a define here plus
+// voidcrew/modules/overmap/code/_overmap.dm): add a define here plus
 // a case in get_overmap_parallax_layer_types(), then tag any overmap object type (or
 // /datum/overmap/planet) with one `parallax_theme = ...` line.
 #define PARALLAX_THEME_ASTEROIDS "parallax_theme_asteroids"

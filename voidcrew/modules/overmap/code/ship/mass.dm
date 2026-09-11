@@ -3,7 +3,7 @@
 ///
 /// Event-driven mass tracking: turf signals feed apply_mass_delta(), which
 /// coalesces into a threshold evaluation driving the integrity latch (nominal/
-/// critical/disabled) that ship_damage.dm's hazard code and the helm read.
+/// critical/disabled) that damage.dm's hazard code and the helm read.
 
 /**
  * Calculates the mass based on the amount of turfs in the shuttle's areas

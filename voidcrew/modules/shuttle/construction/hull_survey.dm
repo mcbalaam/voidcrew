@@ -1210,7 +1210,7 @@
 	// hand-editing team membership (round 6, 2026-08-15, ticket #1). Enlist the surveyor
 	// as commanding officer and everyone standing inside the enclosure as crew.
 	// enlist_crewmember() also clears each ckey through the join password, per the
-	// crew-adding rules in ship.dm.
+	// crew-adding rules in ship/crew.dm.
 	vessel.ship_team.name = vessel_name // not the template's "Commissioned Vessel" placeholder
 	for(var/turf/claimed as anything in turfs)
 		for(var/mob/living/builder in claimed)
