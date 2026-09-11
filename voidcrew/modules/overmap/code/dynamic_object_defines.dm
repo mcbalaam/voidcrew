@@ -174,8 +174,8 @@ GLOBAL_LIST_EMPTY(overmap_planets)
 /// Same contract as the parent's, minus its mapzone requirement: an empty-space
 /// encounter that never got as far as allocating one still needs cleaning up.
 /// preserve_level is handled by unload_level() itself, which has to stop the retries.
-/obj/structure/overmap/planet/empty/can_release_interior()
-	return isnull(get_interior_release_blocker())
+/obj/structure/overmap/planet/empty/can_release_interior(ignore_ssd_grace)
+	return isnull(get_interior_release_blocker(ignore_ssd_grace))
 
 /obj/structure/overmap/planet/empty/get_interior_release_blocker(ignore_ssd_grace = FALSE)
 	// Don't unload if any ships are still docked here
