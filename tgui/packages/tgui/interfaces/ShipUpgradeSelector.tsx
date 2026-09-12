@@ -1,9 +1,4 @@
-import {
-  type ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -420,7 +415,11 @@ export const ShipUpgradeSelector = () => {
               }}
             >
               <Section
-                title="Ship Preview"
+                title={
+                  hoverTheme
+                    ? (themes?.find((t) => t.id === hoverTheme)?.name ?? '')
+                    : (selectedThemeData?.name ?? '')
+                }
                 fill={showMap}
                 fitted
                 buttons={
@@ -453,21 +452,6 @@ export const ShipUpgradeSelector = () => {
                           setActiveTab('upgrades');
                         }}
                       />
-                    </Stack.Item>
-                    <Stack.Item>
-                      <Box
-                        fontSize="11px"
-                        color="label"
-                        textAlign="center"
-                        py={0.5}
-                      >
-                        {!!previewLabel && (
-                          <Box as="span" color="white" bold mr={1}>
-                            {previewLabel}
-                          </Box>
-                        )}
-                        Hover a theme or module to preview it on the map.
-                      </Box>
                     </Stack.Item>
                   </Stack>
                 )}
@@ -1179,9 +1163,13 @@ const ShipPreview = (props: {
         style={{
           width: `${width}px`,
           height: `${height}px`,
-          border: isHovered
+          // Outline, not border: the dashed frame sits outside the sprite
+          // instead of eating into it (box-sizing is border-box), so the
+          // composited module lines up with the hull's tile grid exactly.
+          outline: isHovered
             ? '2px dashed rgba(255, 200, 0, 0.9)'
             : '1px dashed rgba(255, 255, 255, 0.35)',
+          outlineOffset: '0px',
           pointerEvents: 'none',
         }}
       >
@@ -1221,8 +1209,6 @@ const ShipPreview = (props: {
 
   return (
     <HelmPlane
-      // Remount on a different hull so the plane refits to the new artwork.
-      key={`${themeKey}:${hull.width}x${hull.height}`}
       mapWidth={mapWidth}
       mapHeight={mapHeight}
       maxScale={3}
