@@ -124,12 +124,19 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 	if(!message)
 		return
 
+	// The dispatch is async on purpose: dynamic_invoke_verb() reaches the base
+	// /datum/admin_verb/proc/__avd_do_verb, whose child verbs may block (input,
+	// alerts, tgui prompts). say() runs from SHOULD_NOT_SLEEP contexts all over
+	// the codebase, so a synchronous call here made the whole graph look
+	// sleeping to dreamchecker (thousands of must_not_sleep errors). Neither
+	// cmd_admin_say nor dsay sleeps or returns a value, so deferring by a tick
+	// is behaviorally identical.
 	if(message_mods[RADIO_EXTENSION] == MODE_ADMIN)
-		SSadmin_verbs.dynamic_invoke_verb(client, /datum/admin_verb/cmd_admin_say, message)
+		INVOKE_ASYNC(SSadmin_verbs, TYPE_PROC_REF(/datum/controller/subsystem/admin_verbs, dynamic_invoke_verb), client, /datum/admin_verb/cmd_admin_say, message)
 		return
 
 	if(message_mods[RADIO_EXTENSION] == MODE_DEADMIN)
-		SSadmin_verbs.dynamic_invoke_verb(client, /datum/admin_verb/dsay, message)
+		INVOKE_ASYNC(SSadmin_verbs, TYPE_PROC_REF(/datum/controller/subsystem/admin_verbs, dynamic_invoke_verb), client, /datum/admin_verb/dsay, message)
 		return
 
 	// dead is the only state you can never emote
