@@ -1,0 +1,389 @@
+/**
+ * HelmPlane - a zoomable, pannable plane for top-down tactical maps.
+ *
+ * Adapted from BandaStation's NanoMap (https://github.com/ss220club/BandaStation)
+ * for react-zoom-pan-pinch v4, stripped of the station-specific floors, stairs
+ * and lavaland handling. The background is a slot, so consumers draw their own
+ * map (an SVG star chart, a composited ship hull, ...) and drop nodes onto it.
+ *
+ * All node and background coordinates are in map-space pixels, independent of
+ * the current zoom. Nodes scale with the map by default; wrap a label in
+ * `keepScale` to keep it legible at any zoom.
+ */
+import { useLocalStorage } from '@uidotdev/usehooks';
+import {
+  type CSSProperties,
+  type MouseEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  KeepScale,
+  MiniMap,
+  TransformComponent,
+  TransformWrapper,
+  useControls,
+} from 'react-zoom-pan-pinch';
+import { Button } from 'tgui-core/components';
+import { clamp01 } from 'tgui-core/math';
+import { classes } from 'tgui-core/react';
+import { throttle } from 'tgui-core/timer';
+
+/** Camera transform, mirroring react-zoom-pan-pinch's transform state. */
+export type HelmPlaneCamera = {
+  scale: number;
+  positionX: number;
+  positionY: number;
+};
+
+/** A camera with scale 0 means "never saved", so the plane fits on mount. */
+const UNSET_CAMERA: HelmPlaneCamera = {
+  scale: 0,
+  positionX: 0,
+  positionY: 0,
+};
+
+/** Camera is written at most once a second, to keep localStorage quiet. */
+const CAMERA_WRITE_MS = 1000;
+
+type MinimapConfig = {
+  width?: number;
+  height?: number;
+  /** Separate minimap art; falls back to `background` when omitted. */
+  content?: ReactNode;
+};
+
+type HelmPlaneProps = {
+  /** Map-space size in pixels. */
+  mapWidth: number;
+  mapHeight: number;
+  /** Fills the map-space, behind every node. */
+  background?: ReactNode;
+  /** Drawn in the stage, behind the map plane itself (e.g. a vignette). */
+  stageBackground?: ReactNode;
+  /** Nodes positioned in map-space, see `HelmPlane.Button`. */
+  children?: ReactNode;
+  /** Lower zoom bound. Defaults to half the initial fit. */
+  minScale?: number;
+  /** Upper zoom bound. Default 4. */
+  maxScale?: number;
+  /** Zoom used when there is no saved camera. */
+  initialScale?: number;
+  /** Fit the map on first mount when no camera was saved. Default true. */
+  fitOnInit?: boolean;
+  /** Centre the map on init. Default true. */
+  centerOnInit?: boolean;
+  /** Render the zoom controls. Default true. */
+  controls?: boolean;
+  minimap?: boolean | MinimapConfig;
+  /** Persist the camera under this key; omit for a transient camera. */
+  storageKey?: string;
+  onTransform?: (camera: HelmPlaneCamera) => void;
+  className?: string;
+};
+
+type HelmPlaneButtonProps = {
+  /** Map-space position in pixels. */
+  x: number;
+  y: number;
+  /** Anchor point of the node at (x, y). Default 'center'. */
+  anchor?: 'center' | 'top-left';
+  id?: string;
+  selected?: boolean;
+  /** Follow this node as it moves. */
+  tracking?: boolean;
+  trackingDuration?: number;
+  hidden?: boolean;
+  /** Facing in degrees, 0 = up; renders a pointer behind the children. */
+  direction?: number | null;
+  /** Counter-scale the node so it stays legible at any zoom. */
+  keepScale?: boolean;
+  tooltip?: string;
+  onClick?: (event: MouseEvent) => void;
+  onContextMenu?: (event: MouseEvent) => void;
+  className?: string;
+  style?: CSSProperties;
+  zIndex?: number;
+  children?: ReactNode;
+};
+
+const TRANSIENT_KEY = '__helm_plane_transient__';
+
+export const HelmPlane = Object.assign(HelmPlaneInner, {
+  Button: HelmPlaneButton,
+});
+
+function HelmPlaneInner(props: HelmPlaneProps) {
+  const {
+    mapWidth,
+    mapHeight,
+    background,
+    stageBackground,
+    children,
+    minScale,
+    maxScale = 4,
+    initialScale,
+    fitOnInit = true,
+    centerOnInit = true,
+    controls = true,
+    minimap,
+    storageKey,
+    onTransform,
+    className,
+  } = props;
+
+  // `useLocalStorage` needs a key at all times, so transient planes get a
+  // per-instance one that is wiped on unmount. Only an explicit `storageKey`
+  // is treated as a camera worth restoring.
+  const instanceId = useId();
+  const storeKey = storageKey ?? `${TRANSIENT_KEY}_${instanceId}`;
+  const persistent = !!storageKey;
+  const [camera, setCamera] = useLocalStorage<HelmPlaneCamera>(
+    storeKey,
+    UNSET_CAMERA,
+  );
+  const hasSaved = persistent && !!camera && camera.scale > 0;
+
+  useEffect(() => {
+    if (persistent) {
+      return;
+    }
+    return () => {
+      try {
+        window.localStorage.removeItem(storeKey);
+      } catch {
+        // Ignore private-mode/storage failures - the plane still works.
+      }
+    };
+  }, [persistent, storeKey]);
+
+  // Live transform, kept for the controls readout and tracking. Persisting is
+  // throttled separately so dragging does not hammer localStorage.
+  const [transform, setTransform] = useState<HelmPlaneCamera>(
+    hasSaved ? camera : { ...UNSET_CAMERA, scale: initialScale ?? 0 },
+  );
+  const [fitFloor, setFitFloor] = useState<number | null>(null);
+
+  const persistCamera = useMemo(
+    () => throttle((next: HelmPlaneCamera) => setCamera(next), CAMERA_WRITE_MS),
+    [setCamera],
+  );
+
+  const minimapConfig: MinimapConfig | null =
+    minimap === true ? {} : minimap || null;
+  const [minimapVisible, setMinimapVisible] = useState(!!minimapConfig);
+
+  // The first transform after mount is either the restored camera or the fit;
+  // derive the lower zoom bound (half the fit) from it once.
+  const handleTransform = (
+    _ref: unknown,
+    state: { scale: number; positionX: number; positionY: number },
+  ) => {
+    const next: HelmPlaneCamera = {
+      scale: state.scale,
+      positionX: state.positionX,
+      positionY: state.positionY,
+    };
+    setTransform(next);
+    if (fitFloor === null && next.scale > 0) {
+      setFitFloor(next.scale / 2);
+    }
+    persistCamera(next);
+    onTransform?.(next);
+  };
+
+  const resolvedMinScale = minScale ?? fitFloor ?? 0.01;
+
+  return (
+    <TransformWrapper
+      initialScale={hasSaved ? camera.scale : initialScale}
+      initialPositionX={hasSaved ? camera.positionX : undefined}
+      initialPositionY={hasSaved ? camera.positionY : undefined}
+      minScale={resolvedMinScale}
+      maxScale={maxScale}
+      fitOnInit={fitOnInit && !hasSaved}
+      centerOnInit={centerOnInit && !hasSaved}
+      limitToBounds={false}
+      doubleClick={{ disabled: true }}
+      panning={{ velocityDisabled: true }}
+      wheel={{ step: 0.15 }}
+      onTransform={handleTransform}
+    >
+      <div className={classes(['HelmPlane', className])}>
+        <div className="HelmPlane__Stage">
+          {stageBackground}
+          <TransformComponent
+            wrapperStyle={{ width: '100%', height: '100%' }}
+            contentStyle={{ width: `${mapWidth}px`, height: `${mapHeight}px` }}
+          >
+            <div
+              className="HelmPlane__Map"
+              style={{ width: `${mapWidth}px`, height: `${mapHeight}px` }}
+            >
+              {!!background && (
+                <div className="HelmPlane__Background">{background}</div>
+              )}
+              {children}
+            </div>
+          </TransformComponent>
+        </div>
+
+        {!!(minimapConfig && minimapVisible) && (
+          <div className="HelmPlane__Minimap">
+            <MiniMap
+              width={minimapConfig.width ?? 150}
+              height={minimapConfig.height}
+            >
+              <div
+                className="HelmPlane__Map HelmPlane__Map--minimap"
+                style={{ width: `${mapWidth}px`, height: `${mapHeight}px` }}
+              >
+                {minimapConfig.content ?? background}
+              </div>
+            </MiniMap>
+          </div>
+        )}
+
+        {!!controls && (
+          <HelmPlaneControls
+            scale={transform.scale}
+            minScale={resolvedMinScale}
+            maxScale={maxScale}
+            minimapAvailable={!!minimapConfig}
+            minimapVisible={minimapVisible}
+            onToggleMinimap={() => setMinimapVisible((value) => !value)}
+          />
+        )}
+      </div>
+    </TransformWrapper>
+  );
+}
+
+function HelmPlaneControls(props: {
+  scale: number;
+  minScale: number;
+  maxScale: number;
+  minimapAvailable: boolean;
+  minimapVisible: boolean;
+  onToggleMinimap: () => void;
+}) {
+  const { zoomIn, zoomOut, centerView } = useControls();
+  const {
+    scale,
+    minScale,
+    maxScale,
+    minimapAvailable,
+    minimapVisible,
+    onToggleMinimap,
+  } = props;
+
+  const span = Math.max(maxScale - minScale, 0.0001);
+  const zoomFraction = clamp01((scale - minScale) / span);
+
+  return (
+    <div className="HelmPlane__Controls">
+      <Button icon="minus" onClick={() => zoomOut(0.15)} />
+      <Button
+        className="HelmPlane__Controls--center"
+        onClick={() => centerView()}
+      >
+        <div
+          className="HelmPlane__Controls--fill"
+          style={{ width: `${zoomFraction * 100}%` }}
+        />
+        Centre
+      </Button>
+      <Button icon="plus" onClick={() => zoomIn(0.15)} />
+      {!!minimapAvailable && (
+        <Button
+          icon={minimapVisible ? 'map' : 'map-o'}
+          selected={minimapVisible}
+          tooltip={minimapVisible ? 'Hide minimap' : 'Show minimap'}
+          onClick={onToggleMinimap}
+        />
+      )}
+    </div>
+  );
+}
+
+function HelmPlaneButton(props: HelmPlaneButtonProps) {
+  const {
+    x,
+    y,
+    anchor = 'center',
+    id,
+    selected = false,
+    tracking = false,
+    trackingDuration = 1000,
+    hidden = false,
+    direction,
+    keepScale = false,
+    tooltip,
+    onClick,
+    onContextMenu,
+    className,
+    style,
+    zIndex,
+    children,
+  } = props;
+
+  const generatedId = useId();
+  const nodeId = id ?? generatedId;
+  const { zoomToElement, instance } = useControls();
+
+  // Follow the node's map-space position as it updates. The duration is
+  // caller-controlled so a fast-moving contact can be watched smoothly.
+  useEffect(() => {
+    if (!tracking || !selected || hidden) {
+      return;
+    }
+    const currentScale = instance.state.scale;
+    zoomToElement(nodeId, currentScale, trackingDuration, 'linear');
+  }, [x, y, tracking, selected, hidden, nodeId, trackingDuration, zoomToElement, instance]);
+
+  if (hidden) {
+    return null;
+  }
+
+  const transform =
+    anchor === 'center'
+      ? `translate(${x}px, ${y}px) translate(-50%, -50%)`
+      : `translate(${x}px, ${y}px)`;
+
+  const inner = keepScale ? (
+    <KeepScale style={{ transformOrigin: '0 0' }}>{children}</KeepScale>
+  ) : (
+    children
+  );
+
+  return (
+    <div
+      id={nodeId}
+      className={classes([
+        'HelmPlane__Node',
+        selected && 'HelmPlane__Node--selected',
+        tracking && 'HelmPlane__Node--tracking',
+        className,
+      ])}
+      style={{ transform, zIndex, ...style }}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+    >
+      {!!tooltip && <div className="HelmPlane__Node--tooltip">{tooltip}</div>}
+      {direction != null && (
+        <div
+          className="HelmPlane__Node--direction"
+          style={{ transform: `rotate(${direction}deg)` }}
+        >
+          <svg viewBox="0 0 66 66">
+            <polygon points="100,75 200,250 0,250" />
+          </svg>
+        </div>
+      )}
+      {inner}
+    </div>
+  );
+}
