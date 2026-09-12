@@ -13,13 +13,7 @@ import {
 } from 'tgui-core/components';
 
 import { useBackend } from '../../backend';
-import {
-  BURN_NONE,
-  BURN_STOP,
-  type Data,
-  DIR,
-  DIR_VECTOR,
-} from './data';
+import { BURN_NONE, BURN_STOP, type Data, DIR, DIR_VECTOR } from './data';
 import {
   bearingOf,
   deciToClock,
@@ -95,9 +89,6 @@ export const Throttle = () => {
             send(value, true);
           }}
         />
-      </Stack.Item>
-      <Stack.Item color="label" textAlign="center">
-        Cruise
       </Stack.Item>
     </Stack>
   );
@@ -205,15 +196,16 @@ export const VelocityCluster = () => {
   const showCruiseTarget =
     Number.isFinite(cruiseTargetSpeed) && cruiseTargetSpeed > 0;
 
-  const vectorLabel = burnDirection === BURN_STOP
-    ? 'Brake'
-    : burnDirection !== BURN_NONE
-      ? heading
-      : courseVector
-        ? `Cruise ${bearingOf(courseVector[0], courseVector[1])}`
-        : drift
-          ? `Coast ${bearingOf(drift.vector[0], drift.vector[1])}`
-          : 'Hold';
+  const vectorLabel =
+    burnDirection === BURN_STOP
+      ? 'Brake'
+      : burnDirection !== BURN_NONE
+        ? heading
+        : courseVector
+          ? `Cruise ${bearingOf(courseVector[0], courseVector[1])}`
+          : drift
+            ? `Coast ${bearingOf(drift.vector[0], drift.vector[1])}`
+            : 'Hold';
 
   return (
     <LabeledList>
@@ -337,7 +329,13 @@ export const OpsRow = () => {
   return (
     <Stack>
       <Stack.Item grow>
-        <Button fluid icon="anchor" disabled={undockDisabled} tooltip={undockReason()} onClick={() => act('undock')}>
+        <Button
+          fluid
+          icon="anchor"
+          disabled={undockDisabled}
+          tooltip={undockReason()}
+          onClick={() => act('undock')}
+        >
           {undockWarmup
             ? `Undock ${deciToSeconds(undockWarmupRemaining)}s`
             : 'Undock'}
@@ -356,7 +354,9 @@ export const OpsRow = () => {
           }
           tooltip={dockReason()}
           onClick={(event) =>
-            multipleDockOptions ? openDockPicker(event) : runDock(primaryDockOption)
+            multipleDockOptions
+              ? openDockPicker(event)
+              : runDock(primaryDockOption)
           }
         >
           {dockWarmup
@@ -374,7 +374,10 @@ export const OpsRow = () => {
           disabled={
             hiddenInNebula
               ? locked
-              : !flyable || !onNebula || !!nebulaHideWarmup || !!zone_transitioning
+              : !flyable ||
+                !onNebula ||
+                !!nebulaHideWarmup ||
+                !!zone_transitioning
           }
           tooltip={
             hiddenInNebula

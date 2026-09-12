@@ -128,6 +128,7 @@ export const ContactMenu = (props: {
         zIndex: 100,
         border: '1px solid rgba(255,255,255,0.2)',
         borderRadius: '5px',
+        borderTopLeftRadius: '0px',
         padding: '4px',
       }}
       onClick={(event) => event.stopPropagation()}

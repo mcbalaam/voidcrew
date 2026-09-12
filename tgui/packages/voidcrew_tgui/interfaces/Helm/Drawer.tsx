@@ -14,8 +14,8 @@ import {
 } from 'tgui-core/components';
 
 import { useBackend } from '../../backend';
-import { ContactSprite } from './Chart';
 import type { Contact, Data } from './data';
+import { ContactBadge } from './Glyphs';
 import {
   canTravelDock,
   contactKey,
@@ -27,12 +27,6 @@ import {
   useSelection,
   useTravelClock,
 } from './hooks';
-import { contactArt } from './icons';
-
-export const ContactBadge = (props: { contact: Contact }) => {
-  const art = contactArt(props.contact);
-  return <ContactSprite state={art.state} tint={art.tint} size={16} />;
-};
 
 export const Drawer = () => {
   const { data } = useBackend<Data>();
@@ -43,7 +37,7 @@ export const Drawer = () => {
   const freshHails = transmissions.filter((hail) => hail.live && !hail.own).length;
 
   return (
-    <Stack vertical fill>
+    <Stack vertical fill style={{ height: '100%', minHeight: 0 }}>
       <Stack.Item>
         <Tabs>
           <Tabs.Tab
@@ -76,7 +70,7 @@ export const Drawer = () => {
           </Tabs.Tab>
         </Tabs>
       </Stack.Item>
-      <Stack.Item grow>
+      <Stack.Item grow style={{ minHeight: 0 }}>
         <Box style={{ height: '100%', overflowY: 'auto' }}>
           {tab === 'Contacts' && <ContactList />}
           {tab === 'At location' && <AtLocation />}

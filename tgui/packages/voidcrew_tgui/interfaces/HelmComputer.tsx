@@ -203,7 +203,7 @@ const Panel = (props: {
 
 const Faceplate = () => {
   return (
-    <Stack fill vertical>
+    <Stack fill vertical px={1}>
       <Stack.Item>
         <Stack fill>
           <Stack.Item grow={3}>
@@ -224,38 +224,38 @@ const Faceplate = () => {
         </Stack>
       </Stack.Item>
 
-      <Stack.Item grow>
+      <Stack.Item grow style={{ minHeight: 0 }}>
         <Stack fill>
-          <Stack.Item width="15em">
+          <Stack.Item width="17em">
             <Stack vertical fill>
-              <Stack.Item grow>
+              <Stack.Item style={{ minHeight: 0 }}>
                 <Panel title="Hull">
                   <HullGauge />
                 </Panel>
               </Stack.Item>
-              <Stack.Item grow>
+              <Stack.Item style={{ minHeight: 0 }}>
                 <Panel title="Fuel">
                   <FuelStack />
                 </Panel>
               </Stack.Item>
-              <Stack.Item grow>
+              <Stack.Item style={{ minHeight: 0 }}>
                 <Panel title="Propulsion">
                   <DriveGauge />
                 </Panel>
               </Stack.Item>
-              <Stack.Item grow>
-                <Panel title="Sensors">
+              <Stack.Item grow style={{ minHeight: 0 }}>
+                <Panel title="Sensors" fill>
                   <SensorDial />
                 </Panel>
               </Stack.Item>
             </Stack>
           </Stack.Item>
-          <Stack.Item grow>
+          <Stack.Item grow style={{ minHeight: 0 }}>
             <Section fill>
               <Chart />
             </Section>
           </Stack.Item>
-          <Stack.Item width="19em">
+          <Stack.Item width="19em" style={{ minHeight: 0 }}>
             <Panel title="Contacts" fill>
               <Drawer />
             </Panel>

@@ -305,11 +305,9 @@ export const FuelStack = () => {
               disabled={locked}
               tooltip={`${engine.enabled ? 'Shut down' : 'Start'} ${engine.name}`}
               onClick={() => act('toggle_engine', { engine: engine.ref })}
+              color="normal"
             >
-              <Stack align="center">
-                <Stack.Item grow>{engine.name}</Stack.Item>
-                <Stack.Item grow>{percent}%</Stack.Item>
-              </Stack>
+              {engine.name} ({percent}%)
             </Button.Checkbox>
           </Stack.Item>
         );

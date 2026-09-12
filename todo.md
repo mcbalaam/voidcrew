@@ -17,20 +17,25 @@
 - **Фаза 2 (ShipPreview) — СДЕЛАНО.** `ShipUpgradeSelector.tsx` переписан на HelmPlane
   (см. §5). Камера сохраняется при смене темы/модуля (без remount), рамки модулей —
   `outline`, фон остался старый radial-gradient.
-- **Шаг 2 — сам Helm-консоль СДЕЛАНО (v1).** `interfaces/Helm/`: `data.ts`, `icons.ts`,
+- **Шаг 2 — сам Helm-консоль СДЕЛАНО (v1).** `interfaces/Helm/`: `data.ts`, `Glyphs.tsx`,
   `geometry.ts`, `hooks.ts`, `Chart.tsx` (на `HelmPlane`), `Panels.tsx`, `Controls.tsx`,
   `Keys.tsx`, `Drawer.tsx`, `Menu.tsx`, `overlays.tsx`; `interfaces/HelmComputer.tsx` —
   тонкий entry. Стили — **нативный tgui** для всего, кроме карты; `HelmComputer.scss`
   и кастомный шрифт удалены, остался только `HelmPlane.scss` под саму плоскость.
   Карта больше не автоследит за кораблём (был постоянный ресет) — «Recentre» по кнопке.
+- **Контакты — SVG-глифы, НЕ DmIcon.** `Glyphs.tsx` — порт монолитных `ContactGlyph`/
+  `HazardGlyph`/`UnknownGlyph` (+`contactColour`, палитры KIND/PLANET/HAZARD/NEBULA).
+  DmIcon/`icons.ts`/mask/multi-fly либы выпилены: `overmap.dmi` через `iconRefMap` в этом
+  окружении ненадёжен (CSS `mask-image` не резолвит BYOND-ref URL), а SVG-силуэты ещё и
+  читаемее. Корабль — `ShipMark` (amber), пульсы — `PulseMark`, реестр — `ContactBadge`.
 - **UI-полировка — СДЕЛАНО.** Fuel → `Button.Checkbox` (имя движка + `ProgressBar` внутри);
   Sensors без gauge (`LabeledList` «Range/Status» + кнопки сканов); Drive → «Propulsion»;
   Throttle → `Knob`; тултипы нод карты counter-scale (`KeepScale`, больше не растут с зумом);
-  карта всегда рисует базовую копию контакта (дальние больше не пропадают) + fallback-кружок
-  до загрузки `iconRefMap`; корабль — `DmIcon` `ship` с amber-тинтом (тумблер
-  `ROTATE_SHIP_BY_COURSE` в `Chart.tsx`); drift/autopilot — SVG-линии, не квадратики/точки.
-- **Осталось:** in-game проверка (поворот корабля, палитры/размеры меток, компоновка панелей),
-  DM-зачистка фейсплейта (Шаг 4).
+  карта всегда рисует базовую копию контакта (дальние больше не пропадают); drift/autopilot —
+  SVG-линии, не квадратики/точки; отступы корневого `Faceplate` (`px`), ширина левой колонки
+  17em, Hull/Fuel/Propulsion по контенту, Sensors `grow`+`fill`.
+- **Осталось:** in-game проверка (поворот корабля `ROTATE_SHIP_BY_COURSE`, палитры/размеры
+  меток, компоновка панелей), DM-зачистка фейсплейта (Шаг 4).
 - **Побочно:** репо теперь собирается на **BYOND 516.1687** — см. §7 (числовые ключи
   `list()`→`alist()`, CSS `ms` в `stylesheet.dm`, `FORCE_MAP_DIRECTORY`).
 
