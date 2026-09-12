@@ -6,6 +6,29 @@
 
 ---
 
+## СТАТУС (обновлено 2026-09-12, после итерации HelmPlane + ShipPreview)
+
+- **Шаг 0 (deps) — СДЕЛАНО.** `react-zoom-pan-pinch@4.2.0` + `@uidotdev/usehooks@2.4.1`
+  в `tgui/packages/tgui/package.json`. Ставились `bun add --ignore-scripts` (чистый
+  `bun add` падает на postinstall `ttf2woff2` под Windows/bun — не связано с нами).
+- **Шаг 1 (HelmPlane) — СДЕЛАНО.** `tgui/packages/tgui/interfaces/common/HelmPlane.tsx`
+  + `tgui/packages/tgui/styles/interfaces/HelmPlane.scss` (зарегистрирован в `styles/main.scss`).
+  Реальный API — см. §3, шаг 1 (отличается от первоначальной прикидки).
+- **Фаза 2 (ShipPreview) — СДЕЛАНО.** `ShipUpgradeSelector.tsx` переписан на HelmPlane
+  (см. §5). Камера сохраняется при смене темы/модуля (без remount), рамки модулей —
+  `outline`, фон остался старый radial-gradient.
+- **Шаг 2 — сам Helm-консоль СДЕЛАНО (v1).** `interfaces/Helm/`: `data.ts`, `icons.ts`,
+  `geometry.ts`, `hooks.ts`, `Chart.tsx` (на `HelmPlane`), `Panels.tsx`, `Controls.tsx`,
+  `Keys.tsx`, `Drawer.tsx`, `Menu.tsx`, `overlays.tsx`; `interfaces/HelmComputer.tsx` —
+  тонкий entry. Стили — **нативный tgui** для всего, кроме карты; `HelmComputer.scss`
+  и кастомный шрифт удалены, остался только `HelmPlane.scss` под саму плоскость.
+  Карта больше не автоследит за кораблём (был постоянный ресет) — «Recentre» по кнопке.
+- **Осталось:** in-game проверка, вкусовщина по панелям, DM-зачистка фейсплейта (Шаг 4).
+- **Побочно:** репо теперь собирается на **BYOND 516.1687** — см. §7 (числовые ключи
+  `list()`→`alist()`, CSS `ms` в `stylesheet.dm`, `FORCE_MAP_DIRECTORY`).
+
+---
+
 ## 0. Предыстория: сплит DM-стороны уже сделан (не переделывать!)
 
 `/obj/structure/overmap/ship` был монолитом на 4695 строк. Теперь в
@@ -136,25 +159,45 @@ DM-сторона (`ui_data()`/`ui_act()` в `voidcrew/modules/shuttle/helm/_hel
 
 ## 3. План работ (порядок коммитов)
 
-### Шаг 0 — deps
-`bun add react-zoom-pan-pinch @uidotdev/usehooks` (в `tgui/packages/tgui/package.json`,
-рядом с tgui-core; workspace-hoisting дотянет до `voidcrew_tgui`). Проверить `bun install`.
+### Шаг 0 — deps (СДЕЛАНО)
+`react-zoom-pan-pinch@4.2.0`, `@uidotdev/usehooks@2.4.1` в `tgui/packages/tgui/package.json`.
+⚠️ Ставить `bun add --ignore-scripts`: postinstall `ttf2woff2` под Windows/bun падает.
 
-### Шаг 1 — `tgui/packages/tgui/interfaces/common/HelmPlane.tsx` (+ `HelmPlane.scss`)
-Порт/адаптация NanoMap:
-- props: `tileSize`, `mapTiles` (51), `background: ReactNode` (наш SVG), `children` (ноды),
-  `minimapEnabled`, `onZoomChange` (если понадобится);
-- убрать этажность/stairs/лаваланд/`useLocalStorage`-заморочки можно оставить (камера state);
-- `HelmPlane.Button` = нода: absolute, translate по тайлам, `KeepScale`, принимает children
-  (туда DmIcon/SVG/что угодно), пропы `selected/tracking/hidden/direction/tooltip*`;
-- `tracking`-слежение: длительность `zoomToElement` делать параметром (см. риск 1);
-- scss — только обёртки нод/миникарты/контролов (перенос NanoMap.scss урезанный).
+### Шаг 1 — `HelmPlane` (СДЕЛАНО, актуальный API)
+Файлы: `tgui/packages/tgui/interfaces/common/HelmPlane.tsx`,
+`tgui/packages/tgui/styles/interfaces/HelmPlane.scss` (регистрируется в `styles/main.scss`).
+
+Свойства `<HelmPlane>`:
+- `mapWidth`/`mapHeight` — размер карты в **пикселях** (не тайлы; Helm-карта передаёт
+  `51 * tileSize`, Chart сам считает);
+- `background` — узел в map-space (наш SVG/`<img>`);
+- `stageBackground` — узел позади плоскости (виньетка/подложка, НЕ трансформируется);
+- `children` — ноды (см. `HelmPlane.Button`);
+- `minScale` (по умолчанию `fit/2`), `maxScale` (default 4), `initialScale`,
+  `fitOnInit`, `centerOnInit`, `controls`, `minimap`, `storageKey` (для персиста камеры;
+  без него — транзиентная камера, чистится на unmount), `onTransform`, `className`.
+
+`<HelmPlane.Button>`: `x,y` (map-space px), `anchor` (`center`|`top-left`), `id`,
+`selected`, `tracking` + `trackingDuration`, `hidden`, `direction` (deg, стрелка-указатель),
+`keepScale` (counter-scale через `KeepScale`), `tooltip`, `onClick`, `onContextMenu`,
+`className`, `style`, `zIndex`, `children`.
+
+Контролы (`controls`): `−`, `Reset` (масштаб ровно `1x`, позиция сохраняется через
+`setTransform`), `+`, `Centre` (`centerView`), toggle миникарты.
+
+Важные нюансы, уже решённые (не сломать при доработке):
+- `smooth={false}` — иначе v4 множит шаг колёсика на `|deltaY|` и даёт ~1x скачок;
+- `autoAlignment={{ disabled: true }}` — иначе вью перецентровывается при смене
+  размера контента (смене халла/темы);
+- `limitToBounds={false}` — бесконечная плоскость, wrap рисуем сами;
+- камера персистится throttle 1/с через `useLocalStorage`; `onTransform` отдаёт live state
+  (для HUD/токена), `persistCamera` пишет отдельно.
 
 ### Шаг 2 — `tgui/packages/voidcrew_tgui/interfaces/Helm/`
 | файл | из чего |
 |---|---|
 | `data.ts` | типы из текущего `HelmComputer.tsx` (89-333); комментарии-ссылки на DM поправить на НОВЫЕ пути (`ship/sensors.dm`, `ship/distress.dm`, `ship/waypoints.dm`, `ship/transmissions.dm` — сейчас в tsx везде старые `ship_*.dm`) |
-| `icons.ts` | маппинг `kind/variant → { dmi, icon_state, dir?, tint? }`. Планка: планеты/штормы/туманности/руины — состояния `overmap.dmi` как есть; суда — базовый state (см. base_icon_state: `ship`/`shuttle` + `_moving`) + mask-тинт (hostile `#cf4a38`, unknown `#8c9ea2`, sos-обводка). ЕСЛИ строк `variant` не хватает для точного state-маппинга — добавить в DM `get_contact_snapshot()` поле `icon_state` (файл `ship/sensors.dm`, минимальная правка). Перед маппингом снять реальные имена состояний из `voidcrew/modules/overmap/icons/effects/overmap*.dmi` |
+| `icons.ts` | маппинг `kind/variant → { dmi, icon_state, dir?, tint? }`. Планка: планеты/штормы/туманности/руины — состояния `overmap.dmi` как есть; суда — базовый state (см. base_icon_state: `ship`/`shuttle` + `_moving`) + mask-тинт (hostile `#cf4a38`, unknown `#8c9ea2`, sos-обводка). ЕСЛИ строк `variant` не хватает для точного state-маппинга — добавить в DM `get_contact_snapshot()` поле `icon_state` (файл `ship/sensors.dm`, минимальная правка). **Список состояний `voidcrew/modules/overmap/icons/effects/overmap.dmi` уже снят пользователем:** `ship, ship_moving, sector, object, meteor1..meteor4, event, strange_event, dust1..dust4, electrical1..electrical4, globe, carp1..carp4, ion1..ion4, shuttle, shuttle_moving, station, nebula, wormhole, nebule_filled, wormhole_filled, asteroid, star1` |
 | `hooks.ts` | Selection/ChartFocus/MenuControl/DockMenuControl контексты, `useLocked`, `useContacts`, `useTravelClock`, `useDrift`; pure-геометрию из `utils/HelmMapGeometry.ts` перенести сюда (`clampCameraAxis` скорее всего не нужен — плоскость бесконечная) |
 | `Chart.tsx` | HelmPlane: bg-SVG (сетка 51×51+fine grid при зуме, кольца зон `bandOf`/sun — данные `chart.centre/ringInner/ringMiddle/viewRange/sensorRange`), ноды контактов (DmIcon/`Blink` для SOS-пульса, severity→масштаб/фреймы `ion1-4`), токен корабля (glide transition по `moveIntervalMs`, телепорт-эвристика >2.5 тайла, курс/нос по `burnDirection??driftDirection`, view/sensor кольца — ноды), autopilot route + drift track + transmission pulses + destination mark — как SVG/nodes-дети плоскости; follow/pan/Recentre; right-click меню через `Popper`; HUD-углы (HDG/POS/CUR/ENDS/PATH) — `Box` + inline |
 | `Panels.tsx` | Ident (`Input`+rename по Enter, без useFitToWidth — имени дать нативный ellipsis), ZoneBadge (`Icon`+`Tooltip`), AlertStrip (список `NoticeBox`-компакт или строки `Table`; таблица приоритетов alert'ов сохраняется!), Hull/Fuel/Drive/Sensor (`ProgressBar`, `RoundGauge`/`Knob`, `LabeledList`; scan-кнопки = `Button`) |
@@ -174,13 +217,15 @@ DM-сторона (`ui_data()`/`ui_act()` в `voidcrew/modules/shuttle/helm/_hel
 - удалить `/datum/asset/simple/helm_faceplate` (строки ~231-242) и override `ui_assets()`;
 - удалить `voidcrew/modules/shuttle/helm/helm_faceplate.png`;
 - (опционально) полить `icon_state` в `ship/sensors.dm get_contact_snapshot()` — см. шаг 2;
-- проверить компиляцию: CI jobs Compile (`tools/build/build.sh --ci dm -DCIBUILDING -DCITESTING -DALL_MAPS`)
-  или локально `& "C:\Program Files (x86)\BYOND\bin\DreamMaker.exe" tgstation.dme -DCBT -DCIBUILDING -DCITESTING -DALL_MAPS`
-  (BYOND стоит; полная компиляция несколько минут — пользователь предпочитает проверять сам).
+- проверить компиляцию (BYOND 516.1687): `& "C:\Program Files (x86)\BYOND\bin\dm.exe" tgstation.dme -DCBT -DCIBUILDING -DCITESTING -DALL_MAPS`
+  (DreamMaker.exe — GUI, из скрипта зависает; для CLI использовать `dm.exe`).
+  Полная сборка ~1 мин, сейчас проходит с 0 ошибок.
 
 ### Шаг 5 — проверка tgui
-В `tgui/`: `bun install`, `bun run build`, `bun run tsc`, `bun run lint` (скрипты посмотреть
-в `tgui/package.json` / CI workflow `ci_suite.yml`, tgui-джобы). Затем in-game прогон:
+В `tgui/` актуальны скрипты: `bun run tgui:tsc`, `bun run tgui:build`,
+`bun run tgui:test`, `bun run tgui:lint-render`. Отдельных tgui-джоб в
+`.github/workflows/ci_suite.yml` НЕТ (CI компилит только DM), поэтому tgui проверяем локально.
+Затем in-game прогон:
 полёт+глид на разных `moveIntervalMs`, WASD, throttle drag, стыковка/расстыковка, SOS-метки,
 hostile-тинт, right-click меню, миникарта, зум, Recentre, автопилот-маршрут, drift-track,
 zone-transition hold.
@@ -202,7 +247,16 @@ zone-transition hold.
    не должны дёргать act(); только чтение.
 6. Старые комментарии-ссылки в TS на `ship_*.dm` обновить на новые пути в ходе переноса.
 
-## 5. Фаза 2 (согласована идея, не начата): зум/пан превью корабля в ShipUpgradeSelector
+## 5. Фаза 2 (СДЕЛАНО): зум/пан превью корабля в ShipUpgradeSelector
+
+> РЕАЛИЗОВАНО в `tgui/packages/tgui/interfaces/ShipUpgradeSelector.tsx`:
+> `ShipPreview` живёт на `HelmPlane`; hull-PNG — `background`, module-PNG — ноды в
+> map-space, label слота — `keepScale`; click по слоту переключает на вкладку Upgrades
+> и подсвечивает секцию (`selectedSlot`). Рамки модулей — `outline` (не `border`:
+> `box-sizing: border-box` иначе съедает 2px спрайта). `HelmPlane` НЕ ремонтируется по
+> `key` при смене темы — камера сохраняется. `minScale=fit/2`, `maxScale=3`, MiniMap 150px.
+> Окно осталось 1200×900. `hoverModule`/`hoverTheme` — 1-в-1.
+
 
 Идея пользователя: в окне выбора корабля/апгрейдов сделать НЕ статичную картинку,
 а интерактивную (зумить и двигать) — на том же HelmPlane.
@@ -253,3 +307,27 @@ zone-transition hold.
 - World-dmi: `voidcrew/modules/overmap/icons/effects/overmap.dmi` (+`overmap_large.dmi`)
 - Bandastation-этalon: `ss220club/BandaStation@master` → `NtosNavigator.tsx`, `common/NanoMap.tsx`, `styles/interfaces/NanoMap.scss`
 - tgui-core docs (stories): https://tgstation.github.io/tgui-core/ ; npm-версия в lock: 4.3.3
+
+## 7. BYOND 516 (СДЕЛАНО, побочная работа)
+
+Репо переехало на BYOND 516.1687, который сломал несколько мест; всё уже починено,
+полная сборка `dm.exe ... -DCBT -DCIBUILDING -DCITESTING -DALL_MAPS` даёт 0 ошибок
+(dreamchecker тоже 0). На будущее:
+
+- **Числовые ключи в `list()` запрещены** → `alist()`. Правились:
+  `processing/station.dm`, `research/ordnance/_scipaper.dm`, `scipaper_partner.dm`,
+  `game/objects/items/tanks/tanks.dm`, `__DEFINES/food.dm` (3 глобала),
+  `datums/hud.dm` (2), `dynamic_ruleset_midround.dm` (10), `dynamic_ruleset_roundstart.dm` (6),
+  `mob_spawn/corpses/mining_corpses.dm`, `atmospherics/gasmixtures/reactions.dm`,
+  `controllers/subsystem/timer.dm` (2), `quirks/neutral_quirks/transhumanist.dm`,
+  `admin/smites/boneless.dm`.
+- **Лексер 516 ругается на «число+буквы» даже внутри `{"..."}`** (`1500ms`). Форк добавлял
+  `animation`/`@keyframes` в `interface/stylesheet.dm` — убраны (в tgui-chat
+  `tgui-panel/styles/tgchat/chat-*.scss` они уже есть).
+- **`FORCE_MAP_DIRECTORY`** определялся только под `#ifdef LOWMEMORYMODE`, а `-DFORCE_MAP`
+  приходит отдельно → добавили безусловный дефолт в `code/_compile_options.dm`.
+
+Прочее из этой итерации (уже в рабочем дереве, к Helm прямого отношения не имеет):
+`dreamchecker` доведён до 0 ошибок — корни: `say()`/`grow_to_fit()`/`Release()`/
+`spawn_shield_walls()` сделаны `set waitfor = FALSE`, worldgen-очистка вынесена из `Destroy`,
+courier-gloves `return_to_hand` вместо `put_in_hands`.

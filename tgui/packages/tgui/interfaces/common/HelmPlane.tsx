@@ -18,6 +18,7 @@ import {
   useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -81,6 +82,14 @@ type HelmPlaneProps = {
   minimap?: boolean | MinimapConfig;
   /** Persist the camera under this key; omit for a transient camera. */
   storageKey?: string;
+  /**
+   * Ask the plane to centre this map-space point. `nonce` makes a repeat request
+   * for the same point a fresh one. Consumers that don't own the camera (a
+   * contact register, say) drive it through this rather than by reaching in.
+   */
+  focus?: { x: number; y: number; nonce: number } | null;
+  /** Pan animation when `focus` changes, ms. Default 260. */
+  focusDuration?: number;
   onTransform?: (camera: HelmPlaneCamera) => void;
   className?: string;
 };
@@ -131,6 +140,8 @@ function HelmPlaneInner(props: HelmPlaneProps) {
     controls = true,
     minimap,
     storageKey,
+    focus,
+    focusDuration,
     onTransform,
     className,
   } = props;
@@ -219,6 +230,7 @@ function HelmPlaneInner(props: HelmPlaneProps) {
       autoAlignment={{ disabled: true }}
       onTransform={handleTransform}
     >
+      <HelmPlaneFocus focus={focus} duration={focusDuration} />
       <div className={classes(['HelmPlane', className])}>
         <div className="HelmPlane__Stage">
           {stageBackground}
@@ -267,6 +279,38 @@ function HelmPlaneInner(props: HelmPlaneProps) {
       </div>
     </TransformWrapper>
   );
+}
+
+function HelmPlaneFocus(props: {
+  focus?: { x: number; y: number; nonce: number } | null;
+  duration?: number;
+}) {
+  const { setTransform, instance } = useControls();
+  const served = useRef(0);
+
+  useEffect(() => {
+    const request = props.focus;
+    if (!request || request.nonce === served.current) {
+      return;
+    }
+    served.current = request.nonce;
+    const wrapper = instance.wrapperComponent;
+    if (!wrapper) {
+      return;
+    }
+    const rect = wrapper.getBoundingClientRect();
+    const scale = instance.state.scale;
+    // Center the map-space point in the viewport at the current zoom.
+    setTransform(
+      rect.width / 2 - request.x * scale,
+      rect.height / 2 - request.y * scale,
+      scale,
+      props.duration ?? 260,
+      'easeOut',
+    );
+  }, [props.focus, props.duration, instance, setTransform]);
+
+  return null;
 }
 
 function HelmPlaneControls(props: {

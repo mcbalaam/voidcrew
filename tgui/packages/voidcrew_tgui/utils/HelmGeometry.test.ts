@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
+
 import {
-  clampCameraAxis,
   isChartTile,
   visibleCourseSegments,
   wrappedDelta,
-} from './HelmMapGeometry';
+} from '../interfaces/Helm/geometry';
 
 describe('bounded helm coordinates', () => {
   test('clicks and drift stop at every barrier instead of wrapping', () => {
@@ -16,34 +16,6 @@ describe('bounded helm coordinates', () => {
         expect(isChartTile(tile, outside, 51)).toBe(false);
       }
     }
-  });
-
-  test('panning and following keep the viewport inside the map at every zoom', () => {
-    for (const span of [7, 13, 25, 51]) {
-      for (const aspect of [0.5, 1, 1.6, 2]) {
-        for (const visibleSpan of [
-          span * Math.min(1, aspect),
-          span * Math.min(1, 1 / aspect),
-        ]) {
-          for (const focus of [-1000, 0, 1.5, 25.5, 49.5, 51, 1000]) {
-            const bounded = clampCameraAxis(focus, visibleSpan, 51);
-            expect(bounded - visibleSpan / 2).toBeGreaterThanOrEqual(0);
-            expect(bounded + visibleSpan / 2).toBeLessThanOrEqual(51);
-          }
-        }
-      }
-    }
-    expect(clampCameraAxis(20, 13, 51)).toBe(20);
-    expect(clampCameraAxis(-1000, 51, 51)).toBe(25.5);
-    expect(clampCameraAxis(1000, 51, 51)).toBe(25.5);
-  });
-
-  test('reversing a drag at the boundary moves immediately', () => {
-    const edge = clampCameraAxis(1000, 13, 51);
-    expect(clampCameraAxis(edge - 1, 13, 51)).toBe(edge - 1);
-    // Zooming out clamps the old anchor before the next drag applies its delta.
-    const zoomedEdge = clampCameraAxis(edge, 25, 51);
-    expect(clampCameraAxis(zoomedEdge - 1, 25, 51)).toBe(zoomedEdge - 1);
   });
 
   test('actual contact distances still account for looping space', () => {

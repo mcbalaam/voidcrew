@@ -1,3 +1,8 @@
+/**
+ * Pure helm chart geometry. Kept free of the backend import so it can be unit
+ * tested without a BYOND window; hooks.ts re-exports it for consumer use.
+ */
+
 /** Flyable chart coordinates exclude the outer ring of looping barriers. */
 export const isChartTile = (x: number, y: number, size: number) =>
   x >= 2 && x < size && y >= 2 && y < size;
@@ -6,14 +11,22 @@ export const isChartTile = (x: number, y: number, size: number) =>
 export const wrappedDelta = (delta: number, period: number) =>
   delta - Math.floor(delta / period + 0.5) * period;
 
-/** Keep the visible interval inside the single chart, including at full zoom out. */
-export const clampCameraAxis = (
-  focus: number,
-  visibleSpan: number,
-  extent: number,
+export const clamp = (value: number, low: number, high: number) =>
+  Math.max(low, Math.min(high, value));
+
+/** Which concentric band a tile falls in, as calculate_zone_for_turf() decides it. */
+export const bandOf = (
+  tileX: number,
+  tileY: number,
+  centre: number,
+  maxRadius: number,
+  ringInner: number,
+  ringMiddle: number,
 ) => {
-  const halfSpan = Math.min(visibleSpan, extent) / 2;
-  return Math.max(halfSpan, Math.min(extent - halfSpan, focus));
+  const normalized = Math.hypot(tileX - centre, tileY - centre) / maxRadius;
+  if (normalized < ringInner) return 2;
+  if (normalized < ringMiddle) return 1;
+  return 0;
 };
 
 type ChartPoint = readonly [number, number];
