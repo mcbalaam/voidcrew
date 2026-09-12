@@ -447,7 +447,13 @@ function HelmPlaneButton(props: HelmPlaneButtonProps) {
       onClick={onClick}
       onContextMenu={onContextMenu}
     >
-      {!!tooltip && <div className="HelmPlane__Node--tooltip">{tooltip}</div>}
+      {!!tooltip && (
+        <div className="HelmPlane__Node--tooltipAnchor">
+          <KeepScale style={{ transformOrigin: '50% 100%' }}>
+            <div className="HelmPlane__Node--tooltip">{tooltip}</div>
+          </KeepScale>
+        </div>
+      )}
       {direction != null && (
         <div
           className="HelmPlane__Node--direction"

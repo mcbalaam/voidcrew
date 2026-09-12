@@ -239,7 +239,7 @@ const Faceplate = () => {
                 </Panel>
               </Stack.Item>
               <Stack.Item grow>
-                <Panel title="Drive">
+                <Panel title="Propulsion">
                   <DriveGauge />
                 </Panel>
               </Stack.Item>

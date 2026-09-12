@@ -7,8 +7,8 @@ import {
   Box,
   Button,
   Icon,
+  Knob,
   LabeledList,
-  Slider,
   Stack,
 } from 'tgui-core/components';
 
@@ -74,21 +74,23 @@ export const Throttle = () => {
   );
 
   return (
-    <Stack vertical>
+    <Stack vertical align="center">
       <Stack.Item>
-        <Slider
+        <Knob
           value={burnPercentage}
           minValue={1}
           maxValue={100}
           step={1}
           stepPixelSize={4}
-          disabled={locked}
+          size={2}
           unit="%"
           onDrag={(_event, value) => {
+            if (locked) return;
             setDragValue(value);
             send(value, false);
           }}
           onChange={(_event, value) => {
+            if (locked) return;
             setDragValue(value);
             send(value, true);
           }}

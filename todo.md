@@ -23,7 +23,14 @@
   тонкий entry. Стили — **нативный tgui** для всего, кроме карты; `HelmComputer.scss`
   и кастомный шрифт удалены, остался только `HelmPlane.scss` под саму плоскость.
   Карта больше не автоследит за кораблём (был постоянный ресет) — «Recentre» по кнопке.
-- **Осталось:** in-game проверка, вкусовщина по панелям, DM-зачистка фейсплейта (Шаг 4).
+- **UI-полировка — СДЕЛАНО.** Fuel → `Button.Checkbox` (имя движка + `ProgressBar` внутри);
+  Sensors без gauge (`LabeledList` «Range/Status» + кнопки сканов); Drive → «Propulsion»;
+  Throttle → `Knob`; тултипы нод карты counter-scale (`KeepScale`, больше не растут с зумом);
+  карта всегда рисует базовую копию контакта (дальние больше не пропадают) + fallback-кружок
+  до загрузки `iconRefMap`; корабль — `DmIcon` `ship` с amber-тинтом (тумблер
+  `ROTATE_SHIP_BY_COURSE` в `Chart.tsx`); drift/autopilot — SVG-линии, не квадратики/точки.
+- **Осталось:** in-game проверка (поворот корабля, палитры/размеры меток, компоновка панелей),
+  DM-зачистка фейсплейта (Шаг 4).
 - **Побочно:** репо теперь собирается на **BYOND 516.1687** — см. §7 (числовые ключи
   `list()`→`alist()`, CSS `ms` в `stylesheet.dm`, `FORCE_MAP_DIRECTORY`).
 
@@ -193,7 +200,14 @@ DM-сторона (`ui_data()`/`ui_act()` в `voidcrew/modules/shuttle/helm/_hel
 - камера персистится throttle 1/с через `useLocalStorage`; `onTransform` отдаёт live state
   (для HUD/токена), `persistCamera` пишет отдельно.
 
-### Шаг 2 — `tgui/packages/voidcrew_tgui/interfaces/Helm/`
+### Шаг 2 — `tgui/packages/voidcrew_tgui/interfaces/Helm/` (СДЕЛАНО)
+
+> Факт: реализовано (`data`, `icons`, `geometry`, `hooks`, `Chart`, `Panels`, `Controls`,
+> `Keys`, `Drawer`, `Menu`, `overlays`). Отличия от таблицы ниже: чистая геометрия вынесена
+> в `geometry.ts` (не `hooks.ts`); Throttle на `Knob`; Fuel на `Button.Checkbox`; Sensors без
+> `RoundGauge`; Drive переименован в «Propulsion»; тултипы нод counter-scale.
+> Таблица оставлена как исходная задумка.
+
 | файл | из чего |
 |---|---|
 | `data.ts` | типы из текущего `HelmComputer.tsx` (89-333); комментарии-ссылки на DM поправить на НОВЫЕ пути (`ship/sensors.dm`, `ship/distress.dm`, `ship/waypoints.dm`, `ship/transmissions.dm` — сейчас в tsx везде старые `ship_*.dm`) |
@@ -206,11 +220,11 @@ DM-сторона (`ui_data()`/`ui_act()` в `voidcrew/modules/shuttle/helm/_hel
 | `overlays.tsx` | CrashOverlay (`ProgressBar`), AbandonedOverlay (claim) |
 | `HelmComputer.tsx` (entry в `interfaces/`) | тонкий ре-экспорт композиции из `Helm/`, сохранить имя |
 
-### Шаг 3 — вычистить старое
-- удалить `interfaces/HelmComputer.tsx`, `styles/interfaces/HelmComputer.scss`,
-  `tgui/packages/voidcrew_tgui/utils/HelmMapGeometry.ts` (после переноса);
-- убрать импорт/использование `resolveAsset('helm_faceplate.png')` — быть может `resolveAsset`
-  больше нигде в Helm не нужен.
+### Шаг 3 — вычистить старое (СДЕЛАНО)
+- удалены `styles/interfaces/HelmComputer.scss` (1898 строк) и его регистрация в `main.scss`;
+  `utils/HelmMapGeometry.ts` → `interfaces/Helm/geometry.ts`, тест → `utils/HelmGeometry.test.ts`;
+- `interfaces/HelmComputer.tsx` **не удалён**, а заменён тонким entry (по нему регистрируется
+  интерфейс); `resolveAsset` в Helm больше не используется, фейсплейт-арт клиентом не грузится.
 
 ### Шаг 4 — DM-зачистка
 `voidcrew/modules/shuttle/helm/_helm.dm`:
@@ -298,10 +312,11 @@ zone-transition hold.
   `tools/ship_previews/generate_ship_previews.py`
 - Join-меню (список без картинок, вход в shipyard): `tgui/packages/tgui/interfaces/ShipJoinMenu.tsx`
   + `voidcrew/edits/mobs/ship_join_menu.dm`
-- Фейсплейт-арт (удалить): `voidcrew/modules/shuttle/helm/helm_faceplate.png`
-- Текущий UI: `tgui/packages/voidcrew_tgui/interfaces/HelmComputer.tsx`
-- Текущий scss (удалить): `tgui/packages/tgui/styles/interfaces/HelmComputer.scss` (1898 строк)
-- Pure-геометрия: `tgui/packages/voidcrew_tgui/utils/HelmMapGeometry.ts`
+- Фейсплейт-арт (DM, удалить в Шаге 4): `voidcrew/modules/shuttle/helm/helm_faceplate.png`
+- Entry UI: `tgui/packages/voidcrew_tgui/interfaces/HelmComputer.tsx` (тонкая композиция `Helm/`)
+- Старый scss (УДАЛЁН): `tgui/packages/tgui/styles/interfaces/HelmComputer.scss`
+- Бывшая pure-геометрия (УДАЛЕНА): `tgui/packages/voidcrew_tgui/utils/HelmMapGeometry.ts`
+  → теперь `tgui/packages/voidcrew_tgui/interfaces/Helm/geometry.ts`
 - DM helm-консоль: `voidcrew/modules/shuttle/helm/_helm.dm` (`ui_data/ui_act/ui_assets`)
 - DM снимок карты: `voidcrew/modules/overmap/code/ship/sensors.dm` (`get_contact_snapshot`)
 - World-dmi: `voidcrew/modules/overmap/icons/effects/overmap.dmi` (+`overmap_large.dmi`)

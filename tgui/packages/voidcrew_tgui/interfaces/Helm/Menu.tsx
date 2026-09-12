@@ -14,7 +14,8 @@ export const ContactMenu = (props: {
 }) => {
   const { contact, tile, left, top, onClose } = props;
   const { act, data } = useBackend<Data>();
-  const { scanCooldown, state, autopilot, x, y, shipDisabled, canThrust } = data;
+  const { scanCooldown, state, autopilot, x, y, shipDisabled, canThrust } =
+    data;
   const locked = useLocked();
 
   const unknown = contact?.kind === 'ship' && !contact.identified;
@@ -24,6 +25,7 @@ export const ContactMenu = (props: {
     tooltip?: string;
     disabled?: boolean;
     onClick: () => void;
+    icon?: string;
   }[] = [];
 
   if (unknown) {
@@ -59,16 +61,17 @@ export const ContactMenu = (props: {
 
   if (!here) {
     items.push({
-      label: contact ? `Set course · ${contact.name}` : 'Set course here',
+      label: 'AP: Set course',
       tooltip: blocked ?? 'Avoids hazards in allowed zones',
       disabled: locked || !!blocked,
       onClick: () => act('autopilot', { x: tile.x, y: tile.y }),
+      icon: 'crosshairs',
     });
   }
 
   if (contact && canTravelDock(contact)) {
     items.push({
-      label: `Travel & dock · ${contact.name}`,
+      label: `AP: Travel & dock`,
       tooltip: blocked ?? 'Flies there, then begins docking',
       disabled: locked || !!blocked,
       onClick: () =>
@@ -78,6 +81,7 @@ export const ContactMenu = (props: {
           dock: 1,
           target: contact.target,
         }),
+      icon: 'anchor',
     });
   }
 
@@ -86,6 +90,7 @@ export const ContactMenu = (props: {
       label: 'Cancel autopilot',
       disabled: locked,
       onClick: () => act('autopilot_cancel'),
+      icon: 'xmark',
     });
   }
 
@@ -94,6 +99,7 @@ export const ContactMenu = (props: {
       label: 'Clear waypoint',
       disabled: locked,
       onClick: () => act('remove_waypoint', { waypoint: contact.ref }),
+      icon: 'xmark',
     });
   }
 
@@ -107,6 +113,7 @@ export const ContactMenu = (props: {
         act(dismissed ? 'restore_contacts' : 'dismiss_contacts', {
           contacts: [contact.contactRef],
         }),
+      icon: 'trash',
     });
   }
 
@@ -117,14 +124,19 @@ export const ContactMenu = (props: {
       top={`${top}px`}
       width="16em"
       backgroundColor="black"
-      style={{ zIndex: 100, border: '1px solid rgba(255,255,255,0.2)' }}
+      style={{
+        zIndex: 100,
+        border: '1px solid rgba(255,255,255,0.2)',
+        borderRadius: '5px',
+        padding: '4px',
+      }}
       onClick={(event) => event.stopPropagation()}
       onContextMenu={(event) => {
         event.preventDefault();
         event.stopPropagation();
       }}
     >
-      <Box bold p={0.5} backgroundColor="rgba(255,255,255,0.1)">
+      <Box bold p={0.5}>
         {contact?.name ??
           `${String(tile.x).padStart(2, '0')} / ${String(tile.y).padStart(2, '0')}`}
       </Box>
@@ -143,6 +155,7 @@ export const ContactMenu = (props: {
               item.onClick();
               onClose();
             }}
+            icon={item.icon}
           >
             {item.label}
           </Button>

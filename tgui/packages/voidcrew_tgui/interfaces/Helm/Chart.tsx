@@ -8,11 +8,11 @@
  * prop.
  */
 import { Fragment, type CSSProperties, useState } from 'react';
-import { Blink, Box, Button, DmIcon } from 'tgui-core/components';
+import { Blink, Box, Button, DmIcon, Icon } from 'tgui-core/components';
 
 import { HelmPlane } from '../../../tgui/interfaces/common/HelmPlane';
 import { useBackend } from '../../backend';
-import type { Contact, Data } from './data';
+import { type Contact, type Data, DIR_VECTOR } from './data';
 import {
   contactKey,
   isChartTile,
@@ -21,8 +21,9 @@ import {
   useDrift,
   useMenuControl,
   useSelection,
+  visibleCourseSegments,
 } from './hooks';
-import { contactArt, OVERMAP_DMI } from './icons';
+import { CONTACT_TINTS, contactArt, OVERMAP_DMI } from './icons';
 
 /** Map-space pixels per overmap tile. */
 const TILE = 26;
@@ -30,6 +31,15 @@ const TILE = 26;
 const WRAP_MARGIN = 8;
 
 const SHIP_TINT = '#e0a72c';
+
+/** 0 = up (north), clockwise. Flip to compare a rotating token against a fixed sprite. */
+const ROTATE_SHIP_BY_COURSE = false;
+
+const courseAngle = (dir: number) => {
+  const vector = DIR_VECTOR[dir];
+  if (!vector) return 0;
+  return (Math.atan2(vector[0], vector[1]) * 180) / Math.PI;
+};
 
 /** A world DMI sprite, optionally recoloured by masking its alpha. */
 export const ContactSprite = (props: {
@@ -88,6 +98,10 @@ export const Chart = () => {
   const openMenu = useMenuControl();
   const { request: focusRequest } = useChartFocus();
 
+  // The reference map is fetched asynchronously; until it lands there is no
+  // sprite URL to build, so contacts fall back to plain marks.
+  const iconRefReady = !!(globalThis as any).Byond?.iconRefMap?.[OVERMAP_DMI];
+
   const [hovered, setHovered] = useState<string | null>(null);
   // Recentre is opt-in: the plane must never yank itself back to the ship while
   // the crew is looking somewhere else, so following is a button, not a mode.
@@ -105,6 +119,7 @@ export const Chart = () => {
   });
 
   const shipPx = { x: toX(x), y: toY(y) };
+  const shipCourse = data.commandedCourse || data.driftDirection || 0;
   const focus = focusRequest
     ? {
         x: toX(focusRequest.x),
@@ -113,12 +128,12 @@ export const Chart = () => {
       }
     : selfFocus;
 
-  // Wrapped copies: a contact across the seam is also drawn on this side while
-  // it is inside the drawing window, so a ship near an edge sees both sides.
+  // The base copy is always drawn; wrapped copies are added only while the
+  // contact sits near the seam, so a charted contact on the far side isn't lost.
   const copiesOf = (tileX: number, tileY: number) => {
-    const out: { x: number; y: number }[] = [];
-    for (const ox of [-size, 0, size]) {
-      for (const oy of [-size, 0, size]) {
+    const out: { x: number; y: number }[] = [{ x: tileX, y: tileY }];
+    for (const ox of [-size, size]) {
+      for (const oy of [-size, size]) {
         const cx = tileX + ox;
         const cy = tileY + oy;
         if (
@@ -139,7 +154,6 @@ export const Chart = () => {
       height: `${d}px`,
       borderRadius: '50%',
       border: `1px dashed ${colour}`,
-      transform: 'translate(-50%, -50%)',
       pointerEvents: 'none',
     };
   };
@@ -167,7 +181,20 @@ export const Chart = () => {
           onMouseLeave={() => setHovered((cur) => (cur === keyRef ? null : cur))}
           style={{ display: 'flex', transform: `scale(${art.scale})` }}
         >
-          <ContactSprite state={art.state} tint={art.tint} />
+          {iconRefReady ? (
+            <ContactSprite state={art.state} tint={art.tint} />
+          ) : (
+            // Until the icon reference map has loaded there is no sprite to draw;
+            // a plain coloured mark keeps contacts visible rather than blank.
+            <div
+              style={{
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                backgroundColor: art.tint ?? CONTACT_TINTS.neutral,
+              }}
+            />
+          )}
         </div>
       </HelmPlane.Button>
     );
@@ -289,23 +316,59 @@ export const Chart = () => {
             ),
         )}
 
-        {drift?.tiles.map((tile) => (
-          <HelmPlane.Button
-            key={`drift-${tile.step}`}
-            x={toX(tile.x)}
-            y={toY(tile.y)}
-            zIndex={0}
-          >
-            <div
+        {((drift && drift.tiles.length > 0) ||
+          (autopilot?.path?.length ?? 0) > 0) && (
+          <HelmPlane.Button x={0} y={0} anchor="top-left" zIndex={0}>
+            <svg
+              width={mapPx}
+              height={mapPx}
               style={{
-                width: `${TILE * 0.3}px`,
-                height: `${TILE * 0.3}px`,
-                background: 'rgba(224,167,44,0.5)',
-                transform: 'translate(-50%, -50%)',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                pointerEvents: 'none',
+                overflow: 'visible',
               }}
-            />
+            >
+              {drift && drift.tiles.length > 0 && (
+                <polyline
+                  points={[
+                    shipPx,
+                    ...drift.tiles.map((tile) => ({
+                      x: toX(tile.x),
+                      y: toY(tile.y),
+                    })),
+                  ]
+                    .map((point) => `${point.x},${point.y}`)
+                    .join(' ')}
+                  fill="none"
+                  stroke={SHIP_TINT}
+                  strokeOpacity={0.6}
+                  strokeWidth={2}
+                  strokeDasharray="5 4"
+                />
+              )}
+              {(autopilot?.path?.length ?? 0) > 0 &&
+                visibleCourseSegments(
+                  [x, y],
+                  autopilot?.path ?? [],
+                  [x, y],
+                  size,
+                ).map((segment, index) => (
+                    <line
+                      key={`route-${index}`}
+                      x1={toX(segment.from[0])}
+                      y1={toY(segment.from[1])}
+                      x2={toX(segment.to[0])}
+                      y2={toY(segment.to[1])}
+                      stroke="#59b871"
+                      strokeWidth={2}
+                    />
+                  ),
+                )}
+            </svg>
           </HelmPlane.Button>
-        ))}
+        )}
         {!!drift?.hold && (
           <HelmPlane.Button
             x={toX(drift.hold.x)}
@@ -313,37 +376,10 @@ export const Chart = () => {
             zIndex={2}
             keepScale
           >
-            <div
-              style={{
-                color: '#cf4a38',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                transform: 'translate(-50%, -50%)',
-              }}
-            >
-              ▣
-            </div>
+            <Icon name="ban" color="bad" />
           </HelmPlane.Button>
         )}
 
-        {autopilot?.path?.map((node, index) => (
-          <HelmPlane.Button
-            key={`route-${index}`}
-            x={toX(node[0])}
-            y={toY(node[1])}
-            zIndex={2}
-          >
-            <div
-              style={{
-                width: `${TILE * 0.28}px`,
-                height: `${TILE * 0.28}px`,
-                borderRadius: '50%',
-                background: '#59b871',
-                transform: 'translate(-50%, -50%)',
-              }}
-            />
-          </HelmPlane.Button>
-        ))}
         {autopilot?.destX != null && autopilot?.destY != null && (
           <HelmPlane.Button
             x={toX(autopilot.destX)}
@@ -351,15 +387,7 @@ export const Chart = () => {
             zIndex={2}
             keepScale
           >
-            <div
-              style={{
-                color: '#59b871',
-                fontSize: '18px',
-                transform: 'translate(-50%, -50%)',
-              }}
-            >
-              ⌖
-            </div>
+            <Icon name="location-arrow" color="good" />
           </HelmPlane.Button>
         )}
 
@@ -392,12 +420,16 @@ export const Chart = () => {
         >
           <div
             style={{
-              color: SHIP_TINT,
-              fontSize: '24px',
-              transform: 'translate(-50%, -50%)',
+              transform: ROTATE_SHIP_BY_COURSE
+                ? `rotate(${courseAngle(shipCourse)}deg)`
+                : undefined,
             }}
           >
-            ▲
+            {iconRefReady ? (
+              <ContactSprite state="ship" tint={SHIP_TINT} size={24} />
+            ) : (
+              <Icon name="location-arrow" color="good" />
+            )}
           </div>
         </HelmPlane.Button>
       </HelmPlane>

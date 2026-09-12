@@ -10,14 +10,19 @@ import {
   Input,
   LabeledList,
   ProgressBar,
-  RoundGauge,
   Stack,
   Tooltip,
 } from 'tgui-core/components';
 
 import { useBackend } from '../../backend';
 import { BURN_NONE, BURN_STOP, type Data, SCAN_TYPES } from './data';
-import { clockOf, deciToSeconds, useContacts, useDrift, useLocked } from './hooks';
+import {
+  clockOf,
+  deciToSeconds,
+  useContacts,
+  useDrift,
+  useLocked,
+} from './hooks';
 
 export const Ident = () => {
   const { act, data } = useBackend<Data>();
@@ -250,8 +255,7 @@ export const HullGauge = () => {
           maxValue={100}
           color={hullColor(base)}
         >
-          {integrity}%
-          {overhealth > 0 && ` (+${overhealth} plate)`}
+          {integrity}%{overhealth > 0 && ` (+${overhealth} plate)`}
         </ProgressBar>
       </LabeledList.Item>
       <LabeledList.Item label="Status">
@@ -288,24 +292,25 @@ export const FuelStack = () => {
         const percent = engine.maxFuel
           ? Math.round((engine.fuel / engine.maxFuel) * 100)
           : 0;
+        const fuelColour = !engine.enabled
+          ? 'label'
+          : percent < 40
+            ? 'average'
+            : 'good';
         return (
           <Stack.Item key={engine.ref}>
-            <Stack align="center">
-              <Stack.Item>
-                <Button
-                  icon={engine.enabled ? 'power-off' : 'power-on'}
-                  color={engine.enabled ? 'good' : 'bad'}
-                  selected={!!engine.enabled}
-                  disabled={locked}
-                  tooltip={`${engine.enabled ? 'Shut down' : 'Start'} ${engine.name}`}
-                  onClick={() => act('toggle_engine', { engine: engine.ref })}
-                />
-              </Stack.Item>
-              <Stack.Item grow>{engine.name}</Stack.Item>
-              <Stack.Item color={!engine.enabled ? 'label' : percent < 40 ? 'average' : 'good'}>
-                {percent}%
-              </Stack.Item>
-            </Stack>
+            <Button.Checkbox
+              fluid
+              checked={!!engine.enabled}
+              disabled={locked}
+              tooltip={`${engine.enabled ? 'Shut down' : 'Start'} ${engine.name}`}
+              onClick={() => act('toggle_engine', { engine: engine.ref })}
+            >
+              <Stack align="center">
+                <Stack.Item grow>{engine.name}</Stack.Item>
+                <Stack.Item grow>{percent}%</Stack.Item>
+              </Stack>
+            </Button.Checkbox>
           </Stack.Item>
         );
       })}
@@ -359,28 +364,20 @@ export const SensorDial = () => {
   const canScan = !locked && state === 'flying';
 
   return (
-    <Stack vertical align="center">
+    <Stack vertical>
       <Stack.Item>
-        <RoundGauge
-          value={sensorRange}
-          minValue={0}
-          maxValue={10}
-          size={4}
-          alertAfter={8}
-          format={(value) => `${value}`}
-          ranges={{
-            good: [7, 10],
-            average: [4, 6.999],
-            bad: [0, 3.999],
-          }}
-        />
-      </Stack.Item>
-      <Stack.Item color={scanCooldown ? 'average' : 'label'}>
-        {scanCooldown
-          ? `Recharging ${deciToSeconds(scanCooldownRemaining)}s`
-          : canScan
-            ? 'Active scan'
-            : 'Scan requires flight'}
+        <LabeledList>
+          <LabeledList.Item label="Range">{sensorRange} tiles</LabeledList.Item>
+          <LabeledList.Item label="Status">
+            <Box color={scanCooldown ? 'average' : canScan ? 'good' : 'label'}>
+              {scanCooldown
+                ? `Recharging ${deciToSeconds(scanCooldownRemaining)}s`
+                : canScan
+                  ? 'Ready'
+                  : 'Requires flight'}
+            </Box>
+          </LabeledList.Item>
+        </LabeledList>
       </Stack.Item>
       <Stack.Item>
         <Stack>
