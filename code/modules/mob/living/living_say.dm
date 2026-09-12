@@ -110,6 +110,11 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 	datum/saymode/saymode,
 	list/message_mods = list(),
 )
+	// Speech is fire-and-forget: say() can prompt (custom emote input, soft word
+	// filter) and can wait on the ban cache, but no caller consumes its return or
+	// needs it to finish before continuing. Non-blocking here keeps callers such
+	// as Life() and signal handlers from inheriting a sleep they cannot afford.
+	set waitfor = FALSE
 	if(sanitize)
 		message = trim(copytext_char(sanitize(message), 1, MAX_MESSAGE_LEN))
 	if(!message || message == "")

@@ -363,7 +363,7 @@
 	for(var/obj/machinery/computer/helm/console as anything in helm_consoles)
 		SStgui.update_uis(console)
 
-/obj/structure/overmap/ship/newtonian_move(direction, instant, start_delay)
+/obj/structure/overmap/ship/newtonian_move(direction, instant, start_delay, drift_force, controlled_cap, force_loop)
 	return // we don't want ships to endlessly drift in space
 
 /**
