@@ -209,7 +209,14 @@ function HelmPlaneInner(props: HelmPlaneProps) {
       limitToBounds={false}
       doubleClick={{ disabled: true }}
       panning={{ velocityDisabled: true }}
+      // `smooth` (default on) multiplies the wheel step by |deltaY|, which turns
+      // one mouse-wheel notch (deltaY ~100) into a ~1x leap. Off, the wheel moves
+      // by `step` per notch, matching the +/- buttons.
+      smooth={false}
       wheel={{ step: 0.15 }}
+      // Keep the camera put when the map content changes size (e.g. swapping a
+      // hull preview); consumers may redraw without the view jumping.
+      autoAlignment={{ disabled: true }}
       onTransform={handleTransform}
     >
       <div className={classes(['HelmPlane', className])}>
@@ -270,7 +277,7 @@ function HelmPlaneControls(props: {
   minimapVisible: boolean;
   onToggleMinimap: () => void;
 }) {
-  const { zoomIn, zoomOut, centerView } = useControls();
+  const { zoomIn, zoomOut, centerView, setTransform, instance } = useControls();
   const {
     scale,
     minScale,
@@ -287,6 +294,20 @@ function HelmPlaneControls(props: {
     <div className="HelmPlane__Controls">
       <Button icon="minus" onClick={() => zoomOut(0.15)} />
       <Button
+        icon="refresh"
+        tooltip="Reset zoom to 1x"
+        onClick={() =>
+          setTransform(
+            instance.state.positionX,
+            instance.state.positionY,
+            1,
+            200,
+            'easeOut',
+          )
+        }
+      />
+      <Button icon="plus" onClick={() => zoomIn(0.15)} />
+      <Button
         className="HelmPlane__Controls--center"
         onClick={() => centerView()}
       >
@@ -296,7 +317,7 @@ function HelmPlaneControls(props: {
         />
         Centre
       </Button>
-      <Button icon="plus" onClick={() => zoomIn(0.15)} />
+
       {!!minimapAvailable && (
         <Button
           icon={minimapVisible ? 'map' : 'map-o'}
@@ -342,7 +363,17 @@ function HelmPlaneButton(props: HelmPlaneButtonProps) {
     }
     const currentScale = instance.state.scale;
     zoomToElement(nodeId, currentScale, trackingDuration, 'linear');
-  }, [x, y, tracking, selected, hidden, nodeId, trackingDuration, zoomToElement, instance]);
+  }, [
+    x,
+    y,
+    tracking,
+    selected,
+    hidden,
+    nodeId,
+    trackingDuration,
+    zoomToElement,
+    instance,
+  ]);
 
   if (hidden) {
     return null;
