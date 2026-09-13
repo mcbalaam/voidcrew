@@ -73,6 +73,11 @@
       transition: opacity 120ms;
     }
 
+    // Always-on labels (e.g. vessel names) skip the hover gate.
+    &--tooltipAlways {
+      opacity: 1;
+    }
+
     &:hover .HelmPlane__Node--tooltip {
       opacity: 1;
     }

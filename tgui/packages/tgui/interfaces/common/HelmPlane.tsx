@@ -117,6 +117,8 @@ type HelmPlaneButtonProps = {
   /** Counter-scale the node so it stays legible at any zoom. */
   keepScale?: boolean;
   tooltip?: string;
+  /** Keep the tooltip visible without hover (e.g. always-on ship labels). */
+  tooltipAlways?: boolean;
   onClick?: (event: MouseEvent) => void;
   onContextMenu?: (event: MouseEvent) => void;
   className?: string;
@@ -417,6 +419,7 @@ function HelmPlaneButton(props: HelmPlaneButtonProps) {
     direction,
     keepScale = false,
     tooltip,
+    tooltipAlways = false,
     onClick,
     onContextMenu,
     className,
@@ -480,7 +483,14 @@ function HelmPlaneButton(props: HelmPlaneButtonProps) {
       {!!tooltip && (
         <div className="HelmPlane__Node--tooltipAnchor">
           <KeepScale style={{ transformOrigin: '50% 100%' }}>
-            <div className="HelmPlane__Node--tooltip">{tooltip}</div>
+            <div
+              className={classes([
+                'HelmPlane__Node--tooltip',
+                tooltipAlways && 'HelmPlane__Node--tooltipAlways',
+              ])}
+            >
+              {tooltip}
+            </div>
           </KeepScale>
         </div>
       )}

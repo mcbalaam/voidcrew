@@ -252,6 +252,7 @@ export const Chart = () => {
         y={py}
         selected={isSelected}
         tooltip={contact.name}
+        tooltipAlways={contact.kind === 'ship'}
         onClick={() => select(keyRef)}
         onContextMenu={(event) => {
           event.preventDefault();
