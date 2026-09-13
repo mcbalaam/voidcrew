@@ -455,10 +455,20 @@ export const Chart = () => {
           </div>
         }
       >
-        <HelmPlane.Button x={shipPx.x} y={shipPx.y} zIndex={1}>
+        <HelmPlane.Button
+          x={shipPx.x}
+          y={shipPx.y}
+          zIndex={1}
+          style={{ pointerEvents: 'none' }}
+        >
           <div style={ringStyle(viewRange, 'rgba(255,255,255,0.25)')} />
         </HelmPlane.Button>
-        <HelmPlane.Button x={shipPx.x} y={shipPx.y} zIndex={1}>
+        <HelmPlane.Button
+          x={shipPx.x}
+          y={shipPx.y}
+          zIndex={1}
+          style={{ pointerEvents: 'none' }}
+        >
           <div
             style={ringStyle(sensorRange ?? viewRange, 'rgba(89,184,113,0.35)')}
           />
