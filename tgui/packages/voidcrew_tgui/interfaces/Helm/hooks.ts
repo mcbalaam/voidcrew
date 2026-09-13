@@ -10,7 +10,6 @@ import type { MouseEvent } from 'react';
 
 import { useBackend } from '../../backend';
 import {
-  BURN_STOP,
   type Contact,
   type ContactKind,
   type Data,
@@ -190,16 +189,14 @@ export const useDrift = (contacts: Contact[]): Drift | null => {
     driftDirection,
     moveIntervalMs,
     state,
-    burnDirection,
     sensorRange,
   } = data;
 
   const vector = DIR_VECTOR[driftDirection];
   if (!vector || !moveIntervalMs || state !== 'flying') return null;
-  // Nothing to project while the brake is on: decelerate() sheds the whole
-  // velocity in about a second, so a minute of coasting is a course the ship is
-  // in the middle of cancelling. The readouts say BRAKING there instead.
-  if (burnDirection === BURN_STOP) return null;
+  // The brake still projects: the track's length is driven by moveIntervalMs,
+  // which grows as decelerate() bleeds speed away, so the projection collapses
+  // onto the hull as the ship slows instead of vanishing outright.
 
   const size = chart?.size ?? 51;
   const steps = clamp(

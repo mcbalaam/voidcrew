@@ -786,6 +786,16 @@ $caption: 1.6cqw;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
 
+  &.Helm__hud--row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.8cqw;
+
+    .Helm__zoneControls {
+      margin-bottom: 0;
+    }
+  }
+
   &.Helm--tl {
     top: 0.8cqw;
     left: 0.9cqw;
@@ -830,6 +840,14 @@ $caption: 1.6cqw;
   font-family: $stencil;
   font-size: 0.85cqw;
   letter-spacing: 0.14em;
+}
+
+.Helm__readouts {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  align-content: start;
+  column-gap: 1cqw;
+  row-gap: 0.15cqw;
 }
 
 .Helm__hudBig {
@@ -1101,7 +1119,7 @@ $caption: 1.6cqw;
 
 .Helm__zoneButton {
   min-width: 10cqw;
-  padding: 0.45cqw 0.6cqw;
+  padding: 0.45cqw 0.3cqw 0.45cqw 0.6cqw;
   border: 1px solid $steel-700;
   border-top: 2px solid;
   border-radius: 2px;

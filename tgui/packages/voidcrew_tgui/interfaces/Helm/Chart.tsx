@@ -7,7 +7,7 @@
  * pan/zoom live in HelmPlane; the contact register aims it through the `focus`
  * prop.
  */
-import { type CSSProperties, Fragment, useState } from 'react';
+import { type CSSProperties, Fragment, useRef, useState } from 'react';
 import { KeepScale } from 'react-zoom-pan-pinch';
 import { Blink, Box, Button, Icon } from 'tgui-core/components';
 
@@ -44,9 +44,7 @@ const WRAP_MARGIN = 8;
 
 const SHIP_TINT = '#e0a72c';
 
-/** 0 = up (north), clockwise. Flip to compare a rotating token against a fixed sprite. */
-const ROTATE_SHIP_BY_COURSE = false;
-
+/** 0 = up (north), clockwise. */
 const courseAngle = (dir: number) => {
   const vector = DIR_VECTOR[dir];
   if (!vector) return 0;
@@ -194,7 +192,13 @@ export const Chart = () => {
   });
 
   const shipPx = { x: toX(x), y: toY(y) };
-  const shipCourse = data.commandedCourse || data.driftDirection || 0;
+  // Face where the hull is actually going; fall back to the commanded course,
+  // and to the last heading held so braking or stopping does not snap the token
+  // back to due north.
+  const rawCourse = data.driftDirection || data.commandedCourse || 0;
+  const lastFacing = useRef(0);
+  if (rawCourse) lastFacing.current = rawCourse;
+  const shipCourse = rawCourse || lastFacing.current;
   const focus = focusRequest
     ? {
         x: toX(focusRequest.x),
@@ -336,8 +340,8 @@ export const Chart = () => {
     </>
   );
 
-  // Autopilot on the left of the strip; the map's own controls, the ship
-  // recentre and the minimap toggle all sit to the right.
+  // Autopilot on the left of the strip; the map's own controls and the ship
+  // recentre all sit to the right.
   const controlsExtra = autopilotReadout;
 
   const controlsActions = (
@@ -361,7 +365,6 @@ export const Chart = () => {
         mapHeight={mapPx}
         maxScale={3}
         focus={focus}
-        minimap
         controlsClassName="Helm__chartControls"
         controlsExtra={controlsExtra}
         controlsActions={controlsActions}
@@ -377,7 +380,7 @@ export const Chart = () => {
         }
         background={
           <div
-            style={{ position: 'absolute', inset: 0 }}
+            style={{ position: 'absolute', inset: 0, pointerEvents: 'auto' }}
             onContextMenu={(event) => {
               event.preventDefault();
               const native = event.nativeEvent;
@@ -387,7 +390,11 @@ export const Chart = () => {
             <svg
               width={mapPx}
               height={mapPx}
-              style={{ position: 'absolute', inset: 0 }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+              }}
             >
               <circle
                 cx={toX(centre)}
@@ -469,7 +476,7 @@ export const Chart = () => {
             ),
         )}
 
-        {((drift && drift.tiles.length > 0) ||
+        {((showDrift && !!drift && drift.tiles.length > 0) ||
           (autopilot?.path?.length ?? 0) > 0) && (
           <HelmPlane.Button x={0} y={0} anchor="top-left" zIndex={0}>
             <svg
@@ -483,7 +490,7 @@ export const Chart = () => {
                 overflow: 'visible',
               }}
             >
-              {driftPoints.length > 1 && (
+              {showDrift && driftPoints.length > 1 && (
                 <>
                   <polyline
                     points={driftPoints
@@ -519,7 +526,7 @@ export const Chart = () => {
                 <path
                   d={routeArrows}
                   fill="none"
-                  stroke="#b8f5c6"
+                  stroke="#59b871"
                   strokeWidth={1}
                 />
               )}
@@ -555,21 +562,33 @@ export const Chart = () => {
           </HelmPlane.Button>
         )}
 
-        {/* Manual flight: mark where the ship's current velocity puts it. */}
+        {/* Manual flight: a clock above every projected cell, and a pip at the
+            end of the run. */}
+        {!!showDrift &&
+          !!drift &&
+          drift.tiles.map((tile) => (
+            <HelmPlane.Button
+              key={`eta-${tile.x}-${tile.y}-${tile.step}`}
+              x={toX(tile.x)}
+              y={toY(tile.y)}
+              zIndex={1}
+            >
+              <span className="Helm__etaAnchor">
+                <KeepScale style={{ transformOrigin: '50% 100%' }}>
+                  <span className="Helm__eta">
+                    {clockOf(tile.step * drift.stepMs)}
+                  </span>
+                </KeepScale>
+              </span>
+            </HelmPlane.Button>
+          ))}
         {showDrift && !!drift && drift.tiles.length > 0 && (
           <HelmPlane.Button
             x={toX(drift.end.x)}
             y={toY(drift.end.y)}
             zIndex={2}
           >
-            <div className="Helm__target">
-              <span className="Helm__etaAnchor">
-                <KeepScale style={{ transformOrigin: '50% 100%' }}>
-                  <span className="Helm__eta">{clockOf(drift.endMs)}</span>
-                </KeepScale>
-              </span>
-              <TargetReticle />
-            </div>
+            <TargetReticle />
           </HelmPlane.Button>
         )}
 
@@ -592,54 +611,12 @@ export const Chart = () => {
         ))}
 
         <HelmPlane.Button id="helm-ship" x={shipPx.x} y={shipPx.y} zIndex={5}>
-          <ShipMark
-            size={28}
-            direction={ROTATE_SHIP_BY_COURSE ? courseAngle(shipCourse) : 0}
-          />
+          <ShipMark size={28} direction={courseAngle(shipCourse)} />
         </HelmPlane.Button>
       </HelmPlane>
       {/* Readouts ride over the plane. The plane keeps its own zoom/pan
           controls in the bottom-right corner, so the HUD hugs the other
           edges and the recentre sits just above them. */}
-      <div
-        className="Helm__hud"
-        style={{ top: 8, left: 170, textAlign: 'left', zIndex: 10 }}
-      >
-        <div className="Helm__hudLine">
-          <span className="Helm__hudKey">HDG</span>{' '}
-          {burnDirection === BURN_STOP
-            ? 'BRAKING'
-            : burnDirection !== BURN_NONE
-              ? heading
-              : drift
-                ? `DRIFT ${bearingOf(drift.vector[0], drift.vector[1])}`
-                : 'HOLDING'}
-        </div>
-        <div className="Helm__hudLine">
-          <span className="Helm__hudKey">POS</span> {String(x).padStart(2, '0')}{' '}
-          / {String(y).padStart(2, '0')}
-        </div>
-        {showDrift && !!drift && (
-          <div className="Helm__hudLine Helm--drift">
-            <span className="Helm__hudKey">ENDS</span>{' '}
-            {String(drift.end.x).padStart(2, '0')} /{' '}
-            {String(drift.end.y).padStart(2, '0')} · {clockOf(drift.endMs)}
-          </div>
-        )}
-        {showDrift && !!drift?.intercept && (
-          <div
-            className={`Helm__hudLine ${
-              drift.intercept.contact.kind === 'hazard'
-                ? 'Helm--driftHazard'
-                : 'Helm--drift'
-            }`}
-          >
-            <span className="Helm__hudKey">PATH</span>{' '}
-            {drift.intercept.contact.name.toUpperCase()} ·{' '}
-            {clockOf(drift.intercept.ms)}
-          </div>
-        )}
-      </div>
       <div
         className="Helm__hud"
         style={{ top: 8, right: 8, textAlign: 'right', zIndex: 10 }}
@@ -650,10 +627,46 @@ export const Chart = () => {
         </div>
       </div>
       <div
-        className="Helm__hud"
-        style={{ bottom: '2.6cqw', left: 8, zIndex: 10 }}
+        className="Helm__hud Helm__hud--row"
+        style={{ bottom: '3cqw', left: 8, zIndex: 10 }}
       >
         <AutopilotZones />
+        <div className="Helm__readouts">
+          <div className="Helm__hudLine">
+            <span className="Helm__hudKey">HDG</span>{' '}
+            {burnDirection === BURN_STOP
+              ? 'BRAKING'
+              : burnDirection !== BURN_NONE
+                ? heading
+                : drift
+                  ? `DRIFT ${bearingOf(drift.vector[0], drift.vector[1])}`
+                  : 'HOLDING'}
+          </div>
+          <div className="Helm__hudLine">
+            <span className="Helm__hudKey">POS</span>{' '}
+            {String(x).padStart(2, '0')} / {String(y).padStart(2, '0')}
+          </div>
+          {showDrift && !!drift && (
+            <div className="Helm__hudLine Helm--drift">
+              <span className="Helm__hudKey">ENDS</span>{' '}
+              {String(drift.end.x).padStart(2, '0')} /{' '}
+              {String(drift.end.y).padStart(2, '0')} · {clockOf(drift.endMs)}
+            </div>
+          )}
+          {showDrift && !!drift?.intercept && (
+            <div
+              className={`Helm__hudLine ${
+                drift.intercept.contact.kind === 'hazard'
+                  ? 'Helm--driftHazard'
+                  : 'Helm--drift'
+              }`}
+            >
+              <span className="Helm__hudKey">PATH</span>{' '}
+              {drift.intercept.contact.name.toUpperCase()} ·{' '}
+              {clockOf(drift.intercept.ms)}
+            </div>
+          )}
+        </div>
       </div>
       {!!hoveredContact && (
         <Box
