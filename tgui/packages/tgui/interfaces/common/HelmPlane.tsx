@@ -79,6 +79,8 @@ type HelmPlaneProps = {
   centerOnInit?: boolean;
   /** Render the zoom controls. Default true. */
   controls?: boolean;
+  /** Extra class on the controls row, so a consumer can theme the buttons. */
+  controlsClassName?: string;
   minimap?: boolean | MinimapConfig;
   /** Persist the camera under this key; omit for a transient camera. */
   storageKey?: string;
@@ -138,6 +140,7 @@ function HelmPlaneInner(props: HelmPlaneProps) {
     fitOnInit = true,
     centerOnInit = true,
     controls = true,
+    controlsClassName,
     minimap,
     storageKey,
     focus,
@@ -273,6 +276,7 @@ function HelmPlaneInner(props: HelmPlaneProps) {
             maxScale={maxScale}
             minimapAvailable={!!minimapConfig}
             minimapVisible={minimapVisible}
+            className={controlsClassName}
             onToggleMinimap={() => setMinimapVisible((value) => !value)}
           />
         )}
@@ -319,6 +323,7 @@ function HelmPlaneControls(props: {
   maxScale: number;
   minimapAvailable: boolean;
   minimapVisible: boolean;
+  className?: string;
   onToggleMinimap: () => void;
 }) {
   const { zoomIn, zoomOut, centerView, setTransform, instance } = useControls();
@@ -328,6 +333,7 @@ function HelmPlaneControls(props: {
     maxScale,
     minimapAvailable,
     minimapVisible,
+    className,
     onToggleMinimap,
   } = props;
 
@@ -335,7 +341,7 @@ function HelmPlaneControls(props: {
   const zoomFraction = clamp01((scale - minScale) / span);
 
   return (
-    <div className="HelmPlane__Controls">
+    <div className={classes(['HelmPlane__Controls', className])}>
       <Button icon="minus" onClick={() => zoomOut(0.15)} />
       <Button
         icon="refresh"

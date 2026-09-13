@@ -214,7 +214,7 @@ export const Chart = () => {
           }
           style={{ display: 'flex' }}
         >
-          <ContactMark contact={contact} size={TILE * 1.1} />
+          <ContactMark contact={contact} size={TILE * 0.8} />
         </div>
       </HelmPlane.Button>
     );
@@ -239,6 +239,8 @@ export const Chart = () => {
         maxScale={3}
         focus={focus}
         minimap
+        controlsClassName="Helm__chartControls"
+        storageKey="helm-chart-camera"
         stageBackground={
           <div
             style={{ position: 'absolute', inset: 0, background: '#0d1018' }}

@@ -836,6 +836,59 @@ $caption: 1.6cqw;
   line-height: 1.1;
 }
 
+// The HelmPlane's own controls adopt the console's button chrome so they sit in
+// the faceplate rather than looking like stock tgui. Scoped to the chart, the
+// shared plane keeps its native look in the shipyard preview.
+.Helm__chartControls {
+  gap: 0.3cqw;
+
+  .Button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    min-height: 1.7cqw;
+    padding: 0.32cqw 0.55cqw;
+    border: 1px solid $steel-600;
+    border-radius: 2px;
+    background: linear-gradient(#232c30, #171e21);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    color: $label;
+    font-family: $stencil;
+    font-size: 0.85cqw;
+    letter-spacing: 0.1em;
+    line-height: 1.3;
+    text-transform: uppercase;
+    white-space: nowrap;
+
+    &:hover:not(.Button--disabled) {
+      border-color: $steel-500;
+      color: #cfe0e3;
+    }
+
+    &.Button--selected {
+      border-color: $ice-dim;
+      background: linear-gradient(#16333a, #0f2429);
+      color: $ice;
+    }
+
+    &.Button--disabled {
+      opacity: 0.35;
+    }
+
+    .Button--icon {
+      margin: 0;
+      font-size: 0.85cqw;
+    }
+  }
+
+  // The centre button carries a fill bar; let it share the row's height instead
+  // of clipping its label at a fixed 1.6em.
+  .HelmPlane__Controls--center {
+    height: auto;
+  }
+}
+
 .Helm__zoomRow {
   position: absolute;
   top: 0.7cqw;
