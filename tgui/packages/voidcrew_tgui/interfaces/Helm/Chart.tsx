@@ -8,6 +8,7 @@
  * prop.
  */
 import { type CSSProperties, Fragment, useState } from 'react';
+import { KeepScale } from 'react-zoom-pan-pinch';
 import { Blink, Box, Button, Icon } from 'tgui-core/components';
 
 import { HelmPlane } from '../../../tgui/interfaces/common/HelmPlane';
@@ -20,7 +21,7 @@ import {
   type Data,
   DIR_VECTOR,
 } from './data';
-import { ContactMark, PulseMark, ShipMark } from './Glyphs';
+import { ContactMark, PulseMark, ShipMark, TargetReticle } from './Glyphs';
 import {
   bearingOf,
   clockOf,
@@ -32,6 +33,7 @@ import {
   useLocked,
   useMenuControl,
   useSelection,
+  useTravelClock,
   visibleCourseSegments,
 } from './hooks';
 
@@ -49,6 +51,41 @@ const courseAngle = (dir: number) => {
   const vector = DIR_VECTOR[dir];
   if (!vector) return 0;
   return (Math.atan2(vector[0], vector[1]) * 180) / Math.PI;
+};
+
+/**
+ * Chevron marks evenly spaced along a polyline, each pointing the way the line
+ * runs. Drawn as bare SVG paths in map space so they scale with the chart.
+ */
+const chevronMarks = (
+  points: { x: number; y: number }[],
+  spacing: number,
+  size: number,
+) => {
+  const marks: string[] = [];
+  let travelled = 0;
+  let nextAt = spacing / 2;
+  for (let i = 1; i < points.length; i++) {
+    const from = points[i - 1];
+    const to = points[i];
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy);
+    if (!length) continue;
+    const ux = (dx / length) * size;
+    const uy = (dy / length) * size;
+    while (nextAt <= travelled + length) {
+      const t = (nextAt - travelled) / length;
+      const cx = from.x + dx * t;
+      const cy = from.y + dy * t;
+      marks.push(
+        `M${cx - ux + uy * 0.7},${cy - uy - ux * 0.7} L${cx + ux},${cy + uy} L${cx - ux - uy * 0.7},${cy - uy + ux * 0.7}`,
+      );
+      nextAt += spacing;
+    }
+    travelled += length;
+  }
+  return marks.join(' ');
 };
 
 const AUTOPILOT_ZONES: {
@@ -69,7 +106,7 @@ const AutopilotZones = () => {
   if (!prefs) return null;
   return (
     <div className="Helm__zoneControls">
-      <div className="Helm__zoneTitle">AUTOPILOT ZONES / HAZARDS AVOIDED</div>
+      <div className="Helm__zoneTitle">A/P: ALLOWED ZONES</div>
       <div className="Helm__zoneButtons">
         {AUTOPILOT_ZONES.map(({ key, label, colour }) => (
           <button
@@ -126,8 +163,14 @@ export const Chart = () => {
   const openMenu = useMenuControl();
   const { request: focusRequest } = useChartFocus();
   const locked = useLocked();
+  const travelClock = useTravelClock();
   // Uncontrolled drift extrapolation is misleading while autopilot owns steering.
   const showDrift = !!drift && !autopilot?.engaged;
+  // Time to run the plotted course, on the same clock the register shows.
+  const destinationEta =
+    autopilot?.engaged && autopilot.destX != null && autopilot.destY != null
+      ? travelClock(autopilot.destX, autopilot.destY)
+      : null;
 
   const [hovered, setHovered] = useState<string | null>(null);
   // Recentre is opt-in: the plane must never yank itself back to the ship while
@@ -137,6 +180,10 @@ export const Chart = () => {
     y: number;
     nonce: number;
   } | null>(null);
+  // Live camera zoom, only so the grid can fade out as the chart widens. Stored
+  // quantised and only on scale change, so panning never re-renders the SVG.
+  const [cameraScale, setCameraScale] = useState(1);
+  const gridOpacity = Math.max(0, Math.min(1, (cameraScale - 0.5) / 0.5));
 
   // Nodes anchor at the CENTRE of their tile, not its top-left corner.
   const toX = (tileX: number) => (tileX + 0.5) * TILE;
@@ -214,7 +261,7 @@ export const Chart = () => {
           }
           style={{ display: 'flex' }}
         >
-          <ContactMark contact={contact} size={TILE * 0.8} />
+          <ContactMark contact={contact} size={TILE * 0.6} />
         </div>
       </HelmPlane.Button>
     );
@@ -224,15 +271,91 @@ export const Chart = () => {
     ? contacts.find((entry) => contactKey(entry) === hovered)
     : undefined;
 
+  // Trajectory geometry, shared by the lines and the chevrons that ride them.
+  const driftPoints =
+    drift && drift.tiles.length > 0
+      ? [
+          shipPx,
+          ...drift.tiles.map((tile) => ({ x: toX(tile.x), y: toY(tile.y) })),
+        ]
+      : [];
+  const routeSegments =
+    (autopilot?.path?.length ?? 0) > 0
+      ? visibleCourseSegments([x, y], autopilot?.path ?? [], [x, y], size)
+      : [];
+  const routePoints = routeSegments.length
+    ? [
+        { x: toX(routeSegments[0].from[0]), y: toY(routeSegments[0].from[1]) },
+        ...routeSegments.map((segment) => ({
+          x: toX(segment.to[0]),
+          y: toY(segment.to[1]),
+        })),
+      ]
+    : [];
+  const driftArrows = chevronMarks(driftPoints, TILE, TILE * 0.16);
+  const routeArrows = chevronMarks(routePoints, TILE, TILE * 0.16);
+
+  // Autopilot readout and the ship-recentre button share the plane's control
+  // strip along the bottom of the chart, next to the map's own zoom controls.
+  const autopilotReadout = (
+    <>
+      {!!autopilot?.engaged && (
+        <div className="Helm__course">
+          <span className="Helm__courseLabel">
+            A/P · {autopilot.label ?? 'plotted position'}
+          </span>
+          {(autopilot.path?.length ?? 0) > 0 && (
+            <span
+              className="Helm__courseDist"
+              title="The green line and arrows show the remaining autopilot route"
+            >
+              {autopilot.path.length} tiles
+            </span>
+          )}
+          {!!autopilot.dockOnArrival && (
+            <span className="Helm__courseDist">Dock on arrival</span>
+          )}
+          <button
+            type="button"
+            className="Helm__btn"
+            disabled={locked}
+            title="Stand the autopilot down and take manual control"
+            onClick={() => act('autopilot_cancel')}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+      {!autopilot?.engaged && (
+        <div className="Helm__course">
+          <span className="Helm__courseStatus">
+            {autopilot?.status ? `MANUAL · ${autopilot.status}` : 'A/P'}
+          </span>
+        </div>
+      )}
+    </>
+  );
+
+  // Autopilot on the left of the strip; the map's own controls, the ship
+  // recentre and the minimap toggle all sit to the right.
+  const controlsExtra = autopilotReadout;
+
+  const controlsActions = (
+    <Button
+      icon="crosshairs"
+      tooltip="Recentre on the ship"
+      onClick={() =>
+        setSelfFocus({
+          x: toX(x),
+          y: toY(y),
+          nonce: (selfFocus?.nonce ?? 0) + 1,
+        })
+      }
+    />
+  );
+
   return (
-    <div
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        minHeight: 0,
-      }}
-    >
+    <div className="Helm__chart">
       <HelmPlane
         mapWidth={mapPx}
         mapHeight={mapPx}
@@ -240,7 +363,13 @@ export const Chart = () => {
         focus={focus}
         minimap
         controlsClassName="Helm__chartControls"
+        controlsExtra={controlsExtra}
+        controlsActions={controlsActions}
         storageKey="helm-chart-camera"
+        onTransform={(camera) => {
+          const next = Math.round(camera.scale * 100) / 100;
+          setCameraScale((prev) => (prev === next ? prev : next));
+        }}
         stageBackground={
           <div
             style={{ position: 'absolute', inset: 0, background: '#0d1018' }}
@@ -296,14 +425,14 @@ export const Chart = () => {
                     y1={0}
                     x2={i * TILE}
                     y2={mapPx}
-                    stroke="rgba(255, 255, 255, 0.05)"
+                    stroke={`rgba(255, 255, 255, ${0.05 * gridOpacity})`}
                   />
                   <line
                     x1={0}
                     y1={i * TILE}
                     x2={mapPx}
                     y2={i * TILE}
-                    stroke="rgba(255, 255, 255, 0.05)"
+                    stroke={`rgba(255, 255, 255, ${0.05 * gridOpacity})`}
                   />
                 </Fragment>
               ))}
@@ -354,41 +483,46 @@ export const Chart = () => {
                 overflow: 'visible',
               }}
             >
-              {drift && drift.tiles.length > 0 && (
-                <polyline
-                  points={[
-                    shipPx,
-                    ...drift.tiles.map((tile) => ({
-                      x: toX(tile.x),
-                      y: toY(tile.y),
-                    })),
-                  ]
-                    .map((point) => `${point.x},${point.y}`)
-                    .join(' ')}
+              {driftPoints.length > 1 && (
+                <>
+                  <polyline
+                    points={driftPoints
+                      .map((point) => `${point.x},${point.y}`)
+                      .join(' ')}
+                    fill="none"
+                    stroke={SHIP_TINT}
+                    strokeOpacity={0.6}
+                    strokeWidth={1}
+                    strokeDasharray="5 4"
+                  />
+                  <path
+                    d={driftArrows}
+                    fill="none"
+                    stroke={SHIP_TINT}
+                    strokeOpacity={0.9}
+                    strokeWidth={1}
+                  />
+                </>
+              )}
+              {routeSegments.map((segment, index) => (
+                <line
+                  key={`route-${index}`}
+                  x1={toX(segment.from[0])}
+                  y1={toY(segment.from[1])}
+                  x2={toX(segment.to[0])}
+                  y2={toY(segment.to[1])}
+                  stroke="#59b871"
+                  strokeWidth={1}
+                />
+              ))}
+              {!!routeArrows && (
+                <path
+                  d={routeArrows}
                   fill="none"
-                  stroke={SHIP_TINT}
-                  strokeOpacity={0.6}
-                  strokeWidth={2}
-                  strokeDasharray="5 4"
+                  stroke="#b8f5c6"
+                  strokeWidth={1}
                 />
               )}
-              {(autopilot?.path?.length ?? 0) > 0 &&
-                visibleCourseSegments(
-                  [x, y],
-                  autopilot?.path ?? [],
-                  [x, y],
-                  size,
-                ).map((segment, index) => (
-                  <line
-                    key={`route-${index}`}
-                    x1={toX(segment.from[0])}
-                    y1={toY(segment.from[1])}
-                    x2={toX(segment.to[0])}
-                    y2={toY(segment.to[1])}
-                    stroke="#59b871"
-                    strokeWidth={2}
-                  />
-                ))}
             </svg>
           </HelmPlane.Button>
         )}
@@ -408,7 +542,34 @@ export const Chart = () => {
             y={toY(autopilot.destY)}
             zIndex={2}
           >
-            <Icon name="location-arrow" color="good" size={1.5} />
+            <div className="Helm__target">
+              {!!destinationEta && (
+                <span className="Helm__etaAnchor">
+                  <KeepScale style={{ transformOrigin: '50% 100%' }}>
+                    <span className="Helm__eta">{destinationEta}</span>
+                  </KeepScale>
+                </span>
+              )}
+              <TargetReticle />
+            </div>
+          </HelmPlane.Button>
+        )}
+
+        {/* Manual flight: mark where the ship's current velocity puts it. */}
+        {showDrift && !!drift && drift.tiles.length > 0 && (
+          <HelmPlane.Button
+            x={toX(drift.end.x)}
+            y={toY(drift.end.y)}
+            zIndex={2}
+          >
+            <div className="Helm__target">
+              <span className="Helm__etaAnchor">
+                <KeepScale style={{ transformOrigin: '50% 100%' }}>
+                  <span className="Helm__eta">{clockOf(drift.endMs)}</span>
+                </KeepScale>
+              </span>
+              <TargetReticle />
+            </div>
           </HelmPlane.Button>
         )}
 
@@ -423,7 +584,7 @@ export const Chart = () => {
               <Blink>
                 <PulseMark
                   colour={signal.own ? SHIP_TINT : '#8c9ea2'}
-                  size={20}
+                  size={14}
                 />
               </Blink>
             ) : null}
@@ -488,66 +649,12 @@ export const Chart = () => {
           <span className="Helm__hudKey">SPM · TILE</span> {eta || '-'}
         </div>
       </div>
-      <div className="Helm__hud" style={{ bottom: 8, left: 8, zIndex: 10 }}>
-        <AutopilotZones />
-        <div className="Helm__hudLine" style={{ color: '#3d6a76' }}>
-          <span className="Helm__hudKey">SENSOR</span> {sensorRange} TILES
-        </div>
-        {!!autopilot?.engaged && (
-          <div className="Helm__course">
-            <span className="Helm__courseLabel">
-              AUTO · {autopilot.label ?? 'plotted position'}
-            </span>
-            {(autopilot.path?.length ?? 0) > 0 && (
-              <span
-                className="Helm__courseDist"
-                title="The green line and arrows show the remaining autopilot route"
-              >
-                Route: {autopilot.path.length} tiles
-              </span>
-            )}
-            {!!autopilot.dockOnArrival && (
-              <span className="Helm__courseDist">Dock on arrival</span>
-            )}
-            <button
-              type="button"
-              className="Helm__btn"
-              disabled={locked}
-              title="Stand the autopilot down and take manual control"
-              onClick={() => act('autopilot_cancel')}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-        {!autopilot?.engaged && (
-          <div className="Helm__course">
-            <span className="Helm__courseStatus" style={{ marginTop: 0 }}>
-              {autopilot?.status
-                ? `AUTOPILOT OFF · ${autopilot.status}`
-                : 'AUTOPILOT'}
-            </span>
-          </div>
-        )}
-      </div>
-      <Box
-        position="absolute"
-        bottom="3.4em"
-        right="0.3em"
-        style={{ zIndex: 10 }}
+      <div
+        className="Helm__hud"
+        style={{ bottom: '2.6cqw', left: 8, zIndex: 10 }}
       >
-        <Button
-          icon="crosshairs"
-          tooltip="Recentre on the ship"
-          onClick={() =>
-            setSelfFocus({
-              x: toX(x),
-              y: toY(y),
-              nonce: (selfFocus?.nonce ?? 0) + 1,
-            })
-          }
-        />
-      </Box>
+        <AutopilotZones />
+      </div>
       {!!hoveredContact && (
         <Box
           position="absolute"

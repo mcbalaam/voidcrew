@@ -369,3 +369,36 @@ export const PulseMark = (props: { colour: string; size?: number }) => {
     </svg>
   );
 };
+
+/**
+ * The autopilot's destination pip: a red reticle that spins, so a course that
+ * is being flown reads differently at a glance from one that is only projected.
+ */
+export const TargetReticle = (props: { size?: number }) => {
+  const { size = 14 } = props;
+  const colour = '#cf4a38';
+  return (
+    <div
+      className="Helm__reticle"
+      style={{ width: `${size}px`, height: `${size}px` }}
+    >
+      <svg viewBox="-8 -8 16 16" width="100%" height="100%" aria-hidden="true">
+        <circle
+          r={5.6}
+          fill="none"
+          stroke={colour}
+          strokeWidth={1.2}
+          strokeDasharray="2.4 1.6"
+        />
+        <circle r={2.4} fill="none" stroke={colour} strokeWidth={1.1} />
+        <path
+          d="M0,-7.6 V-4.6 M0,4.6 V7.6 M-7.6,0 H-4.6 M4.6,0 H7.6"
+          fill="none"
+          stroke={colour}
+          strokeWidth={1.5}
+        />
+        <circle r={0.9} fill={colour} />
+      </svg>
+    </div>
+  );
+};

@@ -893,27 +893,27 @@ const Faceplate = () => {
             <AlertStrip />
           </Panel>
 
-          <Panel rect={GEOMETRY.HULL} label="Hull" aux="integrity">
+          <Panel rect={GEOMETRY.HULL} label="Hull integrity">
             <HullGauge />
           </Panel>
-          <Panel rect={GEOMETRY.FUEL} label="Fuel" aux="drive mass">
+          <Panel rect={GEOMETRY.FUEL} label="Fuel">
             <FuelStack />
           </Panel>
-          <Panel rect={GEOMETRY.DRIVE} label="Drive" aux="thrust">
+          <Panel rect={GEOMETRY.DRIVE} label="Drive">
             <DriveGauge />
           </Panel>
-          <Panel rect={GEOMETRY.SENSOR} label="Sensors" aux="array">
+          <Panel rect={GEOMETRY.SENSOR} label="Sensors">
             <SensorDial />
           </Panel>
 
-          <Panel rect={GEOMETRY.CHART} label="Navigation chart">
+          <Panel rect={GEOMETRY.CHART}>
             <Chart />
           </Panel>
           <Panel rect={GEOMETRY.DRAWER} label="Contacts">
             <Drawer />
           </Panel>
 
-          <Panel rect={GEOMETRY.THROT} label="Throttle" aux="cruise">
+          <Panel rect={GEOMETRY.THROT} label="Throttle">
             <Throttle />
           </Panel>
           <Panel
@@ -986,20 +986,18 @@ const Faceplate = () => {
 const Panel = (props: {
   rect: Rect;
   label?: string;
-  aux?: string;
   /** Right-aligned control in the caption bar. The label row is the only
    * chrome a well owns, so a panel-scoped switch lives there or nowhere. */
   action?: React.ReactNode;
   children;
 }) => {
-  const { rect, label, aux, action, children } = props;
+  const { rect, label, action, children } = props;
   return (
     <div className="Helm__panel" style={panelStyle(rect)}>
       <div className={`Helm__well ${label ? 'Helm__well--labelled' : ''}`}>
         {!!label && (
           <div className="Helm__wellLabel">
             {label}
-            {!!aux && <span className="Helm__wellAux">/ {aux}</span>}
             {action}
           </div>
         )}
@@ -1111,9 +1109,7 @@ const Ident = () => {
             type="button"
             ref={textRef}
             className="Helm__shipName"
-            style={
-              { '--helm-name-scale': scale } as React.CSSProperties
-            }
+            style={{ '--helm-name-scale': scale } as React.CSSProperties}
             disabled={locked}
             title={locked ? shipInfo.name : `${shipInfo.name}, rename vessel`}
             onClick={() => setEditing(true)}
@@ -1121,14 +1117,11 @@ const Ident = () => {
             {shipInfo.name}
           </button>
         )}
+        <span className="Helm__shipClass">
+          {shipInfo.class}
+          {!!shipInfo.mass && ` · ${shipInfo.mass}t`}
+        </span>
       </div>
-      <span className="Helm__shipClass">
-        {shipInfo.class}
-        {!!shipInfo.mass && ` · ${shipInfo.mass}t`}
-      </span>
-      <span className="Helm__shipPos">
-        {String(x).padStart(2, '0')} / {String(y).padStart(2, '0')}
-      </span>
     </div>
   );
 };
@@ -1802,7 +1795,8 @@ const ContactMenu = (props: {
 }) => {
   const { contact, tile, left, top, onClose } = props;
   const { act, data } = useBackend<Data>();
-  const { scanCooldown, state, autopilot, x, y, shipDisabled, canThrust } = data;
+  const { scanCooldown, state, autopilot, x, y, shipDisabled, canThrust } =
+    data;
   const locked = useLocked();
 
   const unknown = contact?.kind === 'ship' && !contact.identified;
@@ -1912,7 +1906,8 @@ const ContactMenu = (props: {
       }}
     >
       <div className="Helm__menuHead">
-        {contact?.name ?? `${String(tile.x).padStart(2, '0')} / ${String(tile.y).padStart(2, '0')}`}
+        {contact?.name ??
+          `${String(tile.x).padStart(2, '0')} / ${String(tile.y).padStart(2, '0')}`}
       </div>
       {items.length === 0 ? (
         <div className="Helm__menuEmpty">No actions available</div>
@@ -2069,8 +2064,16 @@ const ContactGlyph = (props: {
         return (
           <>
             <circle cx={-3.2} r={1.5} fill={colour} />
-            <path d="M-1.6,-2.8 A3.2 3.2 0 0 1 -1.6,2.8" {...line} strokeWidth={1.4} />
-            <path d="M0,-4.6 A5.6 5.6 0 0 1 0,4.6" {...line} strokeWidth={1.4} />
+            <path
+              d="M-1.6,-2.8 A3.2 3.2 0 0 1 -1.6,2.8"
+              {...line}
+              strokeWidth={1.4}
+            />
+            <path
+              d="M0,-4.6 A5.6 5.6 0 0 1 0,4.6"
+              {...line}
+              strokeWidth={1.4}
+            />
           </>
         );
       }
@@ -2117,14 +2120,25 @@ const ContactGlyph = (props: {
       }
       return (
         <>
-          <rect x={-4} y={-4} width={8} height={8} {...line} strokeWidth={1.7} />
+          <rect
+            x={-4}
+            y={-4}
+            width={8}
+            height={8}
+            {...line}
+            strokeWidth={1.7}
+          />
           <rect x={-1.4} y={-1.4} width={2.8} height={2.8} fill={colour} />
         </>
       );
 
     case 'ship':
       return (
-        <path d="M0,-5.5 L4,4.5 L0,2 L-4,4.5 Z" fill={colour} fillOpacity={0.9} />
+        <path
+          d="M0,-5.5 L4,4.5 L0,2 L-4,4.5 Z"
+          fill={colour}
+          fillOpacity={0.9}
+        />
       );
 
     case 'distress':
@@ -2189,7 +2203,13 @@ const ContactGlyph = (props: {
       );
 
     case 'mission':
-      return <path d="M0,-5.2 L5.2,0 L0,5.2 L-5.2,0 Z" fill={colour} fillOpacity={0.9} />;
+      return (
+        <path
+          d="M0,-5.2 L5.2,0 L0,5.2 L-5.2,0 Z"
+          fill={colour}
+          fillOpacity={0.9}
+        />
+      );
 
     case 'rumor':
       // Same diamond as a mission, hollow: a lead, not an assignment. Hollow
@@ -2200,7 +2220,10 @@ const ContactGlyph = (props: {
     case 'event':
       return (
         <>
-          <path d="M0,-5.4 L4.7,-2.7 L4.7,2.7 L0,5.4 L-4.7,2.7 L-4.7,-2.7 Z" {...line} />
+          <path
+            d="M0,-5.4 L4.7,-2.7 L4.7,2.7 L0,5.4 L-4.7,2.7 L-4.7,-2.7 Z"
+            {...line}
+          />
           <circle r={1.4} fill={colour} />
         </>
       );
@@ -2234,7 +2257,10 @@ const HazardGlyph = (props: {
       // reads as a field.
       return (
         <>
-          <path d="M-4.8,-2.4 L-2.2,-4.2 L-0.8,-1.8 L-3.2,-0.4 Z" fill={colour} />
+          <path
+            d="M-4.8,-2.4 L-2.2,-4.2 L-0.8,-1.8 L-3.2,-0.4 Z"
+            fill={colour}
+          />
           <path d="M1.4,-4.4 L4.6,-3.2 L4,-0.4 L1,-1.4 Z" fill={colour} />
           <path d="M-2.6,1.4 L0.6,0.8 L1.4,3.8 L-1.6,4.4 Z" fill={colour} />
           <circle cx={3.6} cy={3.2} r={1.2} fill={colour} />
@@ -2254,7 +2280,12 @@ const HazardGlyph = (props: {
         </>
       );
     case 'electrical':
-      return <path d="M1.6,-6 L-3.4,0.4 L-0.2,0.4 L-1.6,6 L3.4,-0.4 L0.2,-0.4 Z" fill={colour} />;
+      return (
+        <path
+          d="M1.6,-6 L-3.4,0.4 L-0.2,0.4 L-1.6,6 L3.4,-0.4 L0.2,-0.4 Z"
+          fill={colour}
+        />
+      );
     default:
       // Something is out there and the sensors won't say what.
       return (
@@ -2277,7 +2308,9 @@ const Drawer = () => {
   const [tab, setTab] = useState<Tab>('Contacts');
   // Only hails still pulsing on the chart count as unread-ish; an old log is not
   // something to keep nagging about.
-  const freshHails = transmissions.filter((hail) => hail.live && !hail.own).length;
+  const freshHails = transmissions.filter(
+    (hail) => hail.live && !hail.own,
+  ).length;
 
   return (
     <div className="Helm__drawerWrap">
@@ -2540,7 +2573,9 @@ const AtLocation = () => {
         <div key={object.ref} className="Helm__card">
           <div className="Helm__cardName">{object.name}</div>
           <div className="Helm__cardMeta">
-            {object.integrity ? `Integrity ${object.integrity}%` : 'Sharing tile'}
+            {object.integrity
+              ? `Integrity ${object.integrity}%`
+              : 'Sharing tile'}
           </div>
           {!!object.hazard && (
             <div className="Helm__cardDesc">{object.hazard}</div>
@@ -2761,7 +2796,10 @@ const Throttle = () => {
     if (!track) return;
     const rect = track.getBoundingClientRect();
     const value = Math.round(
-      Math.min(100, Math.max(1, (1 - (clientY - rect.top) / rect.height) * 100)),
+      Math.min(
+        100,
+        Math.max(1, (1 - (clientY - rect.top) / rect.height) * 100),
+      ),
     );
     setDragValue(value);
     send(value, force);
@@ -3188,7 +3226,9 @@ const OpsRow = () => {
         state={dockWarmup ? 'armed' : undefined}
         title={dockReason()}
         onClick={(event) =>
-          multipleDockOptions ? openDockPicker(event) : runDock(primaryDockOption)
+          multipleDockOptions
+            ? openDockPicker(event)
+            : runDock(primaryDockOption)
         }
       />
       <OpsButton
@@ -3211,7 +3251,9 @@ const OpsRow = () => {
               !!nebulaHideWarmup ||
               !!zone_transitioning
         }
-        state={hiddenInNebula ? 'active' : nebulaHideWarmup ? 'armed' : undefined}
+        state={
+          hiddenInNebula ? 'active' : nebulaHideWarmup ? 'armed' : undefined
+        }
         title={
           hiddenInNebula
             ? 'Break concealment and become visible again'

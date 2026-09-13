@@ -112,6 +112,19 @@
       height: 1.6em;
     }
 
+    &--extra {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    &--main {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+    }
+
     &--fill {
       position: absolute;
       inset: 0 auto 0 0;

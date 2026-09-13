@@ -81,6 +81,10 @@ type HelmPlaneProps = {
   controls?: boolean;
   /** Extra class on the controls row, so a consumer can theme the buttons. */
   controlsClassName?: string;
+  /** Rendered before the built-in controls, inside the same row (left slot). */
+  controlsExtra?: ReactNode;
+  /** Rendered after the built-in controls, inside the same row (right slot). */
+  controlsActions?: ReactNode;
   minimap?: boolean | MinimapConfig;
   /** Persist the camera under this key; omit for a transient camera. */
   storageKey?: string;
@@ -141,6 +145,8 @@ function HelmPlaneInner(props: HelmPlaneProps) {
     centerOnInit = true,
     controls = true,
     controlsClassName,
+    controlsExtra,
+    controlsActions,
     minimap,
     storageKey,
     focus,
@@ -220,7 +226,12 @@ function HelmPlaneInner(props: HelmPlaneProps) {
       maxScale={maxScale}
       fitOnInit={fitOnInit && !hasSaved}
       centerOnInit={centerOnInit && !hasSaved}
-      limitToBounds={false}
+      // Keep the camera on the map: drag and wheel stop at the content edges,
+      // and a zoomed-out map is centred instead of drifting off. Without this
+      // the plane is infinite and a flick can leave the map far off screen.
+      limitToBounds
+      centerZoomedOut
+      disablePadding
       doubleClick={{ disabled: true }}
       panning={{ velocityDisabled: true }}
       // `smooth` (default on) multiplies the wheel step by |deltaY|, which turns
@@ -277,6 +288,8 @@ function HelmPlaneInner(props: HelmPlaneProps) {
             minimapAvailable={!!minimapConfig}
             minimapVisible={minimapVisible}
             className={controlsClassName}
+            extra={controlsExtra}
+            actions={controlsActions}
             onToggleMinimap={() => setMinimapVisible((value) => !value)}
           />
         )}
@@ -324,6 +337,8 @@ function HelmPlaneControls(props: {
   minimapAvailable: boolean;
   minimapVisible: boolean;
   className?: string;
+  extra?: ReactNode;
+  actions?: ReactNode;
   onToggleMinimap: () => void;
 }) {
   const { zoomIn, zoomOut, centerView, setTransform, instance } = useControls();
@@ -334,6 +349,8 @@ function HelmPlaneControls(props: {
     minimapAvailable,
     minimapVisible,
     className,
+    extra,
+    actions,
     onToggleMinimap,
   } = props;
 
@@ -342,40 +359,47 @@ function HelmPlaneControls(props: {
 
   return (
     <div className={classes(['HelmPlane__Controls', className])}>
-      <Button icon="minus" onClick={() => zoomOut(0.15)} />
-      <Button
-        icon="refresh"
-        tooltip="Reset zoom to 1x"
-        onClick={() =>
-          setTransform(
-            instance.state.positionX,
-            instance.state.positionY,
-            1,
-            200,
-            'easeOut',
-          )
-        }
-      />
-      <Button icon="plus" onClick={() => zoomIn(0.15)} />
-      <Button
-        className="HelmPlane__Controls--center"
-        onClick={() => centerView()}
-      >
-        <div
-          className="HelmPlane__Controls--fill"
-          style={{ width: `${zoomFraction * 100}%` }}
-        />
-        Centre
-      </Button>
+      {!!extra && <div className="HelmPlane__Controls--extra">{extra}</div>}
 
-      {!!minimapAvailable && (
+      <div className="HelmPlane__Controls--main">
+        <Button icon="minus" onClick={() => zoomOut(0.15)} />
         <Button
-          icon={minimapVisible ? 'map' : 'map-o'}
-          selected={minimapVisible}
-          tooltip={minimapVisible ? 'Hide minimap' : 'Show minimap'}
-          onClick={onToggleMinimap}
+          icon="refresh"
+          tooltip="Reset zoom to 1x"
+          onClick={() =>
+            setTransform(
+              instance.state.positionX,
+              instance.state.positionY,
+              1,
+              200,
+              'easeOut',
+            )
+          }
         />
-      )}
+        <Button icon="plus" onClick={() => zoomIn(0.15)} />
+        <Button
+          className="HelmPlane__Controls--center"
+          icon="bullseye"
+          tooltip="Centre the view"
+          onClick={() => centerView()}
+        >
+          <div
+            className="HelmPlane__Controls--fill"
+            style={{ width: `${zoomFraction * 100}%` }}
+          />
+        </Button>
+
+        {actions}
+
+        {!!minimapAvailable && (
+          <Button
+            icon={minimapVisible ? 'map' : 'map-o'}
+            selected={minimapVisible}
+            tooltip={minimapVisible ? 'Hide minimap' : 'Show minimap'}
+            onClick={onToggleMinimap}
+          />
+        )}
+      </div>
     </div>
   );
 }

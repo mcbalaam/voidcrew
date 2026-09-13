@@ -1123,7 +1123,7 @@
 				if("autopilot_cancel")
 					if(!current_ship.autopilot_engaged)
 						return
-					current_ship.disengage_autopilot("stood down at the helm")
+					current_ship.disengage_autopilot("manual cancel")
 					return
 				if("change_burn_percentage")
 					var/new_percentage = clamp(text2num(params["percentage"]), 1, 100)
