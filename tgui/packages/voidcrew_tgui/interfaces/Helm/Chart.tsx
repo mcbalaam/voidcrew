@@ -12,14 +12,24 @@ import { Blink, Box, Button, Icon } from 'tgui-core/components';
 
 import { HelmPlane } from '../../../tgui/interfaces/common/HelmPlane';
 import { useBackend } from '../../backend';
-import { type Contact, type Data, DIR_VECTOR } from './data';
+import {
+  type AutopilotPrefs,
+  BURN_NONE,
+  BURN_STOP,
+  type Contact,
+  type Data,
+  DIR_VECTOR,
+} from './data';
 import { ContactMark, PulseMark, ShipMark } from './Glyphs';
 import {
+  bearingOf,
+  clockOf,
   contactKey,
   isChartTile,
   useChartFocus,
   useContacts,
   useDrift,
+  useLocked,
   useMenuControl,
   useSelection,
   visibleCourseSegments,
@@ -41,9 +51,68 @@ const courseAngle = (dir: number) => {
   return (Math.atan2(vector[0], vector[1]) * 180) / Math.PI;
 };
 
+const AUTOPILOT_ZONES: {
+  key: keyof AutopilotPrefs;
+  label: string;
+  colour: string;
+}[] = [
+  { key: 'allowNeutral', label: 'Neutral Zone', colour: '#59b871' },
+  { key: 'allowContested', label: 'Contested Zone', colour: '#d9a230' },
+  { key: 'allowLawless', label: 'Lawless Zone', colour: '#cf4a38' },
+];
+
+/** Flight-policy toggles shown over the chart, straight from the server prefs. */
+const AutopilotZones = () => {
+  const { act, data } = useBackend<Data>();
+  const locked = useLocked();
+  const prefs = data.autopilot?.prefs;
+  if (!prefs) return null;
+  return (
+    <div className="Helm__zoneControls">
+      <div className="Helm__zoneTitle">AUTOPILOT ZONES / HAZARDS AVOIDED</div>
+      <div className="Helm__zoneButtons">
+        {AUTOPILOT_ZONES.map(({ key, label, colour }) => (
+          <button
+            key={key}
+            type="button"
+            className="Helm__zoneButton"
+            style={{ borderTopColor: colour }}
+            aria-pressed={!!prefs[key]}
+            disabled={locked}
+            title={`${prefs[key] ? 'Block' : 'Allow'} autopilot entry into the ${label}`}
+            onClick={() =>
+              act('autopilot_pref', { key, value: prefs[key] ? 0 : 1 })
+            }
+          >
+            <span>{label}</span>
+            <span className="Helm__zoneState">
+              <span
+                className={`Helm__zoneLight ${prefs[key] ? 'Helm--allowed' : 'Helm--blocked'}`}
+              />
+              {prefs[key] ? 'Allowed' : 'Blocked'}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const Chart = () => {
-  const { data } = useBackend<Data>();
-  const { x, y, chart, sensorRange, transmissions = [], autopilot } = data;
+  const { act, data } = useBackend<Data>();
+  const {
+    x,
+    y,
+    chart,
+    sensorRange,
+    transmissions = [],
+    autopilot,
+    burnDirection,
+    driftDirection,
+    speed,
+    heading,
+    eta,
+  } = data;
 
   const size = chart?.size ?? 51;
   const centre = chart?.centre ?? (size - 1) / 2;
@@ -56,6 +125,9 @@ export const Chart = () => {
   const { selected, select } = useSelection();
   const openMenu = useMenuControl();
   const { request: focusRequest } = useChartFocus();
+  const locked = useLocked();
+  // Uncontrolled drift extrapolation is misleading while autopilot owns steering.
+  const showDrift = !!drift && !autopilot?.engaged;
 
   const [hovered, setHovered] = useState<string | null>(null);
   // Recentre is opt-in: the plane must never yank itself back to the ship while
@@ -363,7 +435,105 @@ export const Chart = () => {
           />
         </HelmPlane.Button>
       </HelmPlane>
-      <Box position="absolute" top="0.5em" right="0.3em" style={{ zIndex: 10 }}>
+      {/* Readouts ride over the plane. The plane keeps its own zoom/pan
+          controls in the bottom-right corner, so the HUD hugs the other
+          edges and the recentre sits just above them. */}
+      <div
+        className="Helm__hud"
+        style={{ top: 8, left: 170, textAlign: 'left', zIndex: 10 }}
+      >
+        <div className="Helm__hudLine">
+          <span className="Helm__hudKey">HDG</span>{' '}
+          {burnDirection === BURN_STOP
+            ? 'BRAKING'
+            : burnDirection !== BURN_NONE
+              ? heading
+              : drift
+                ? `DRIFT ${bearingOf(drift.vector[0], drift.vector[1])}`
+                : 'HOLDING'}
+        </div>
+        <div className="Helm__hudLine">
+          <span className="Helm__hudKey">POS</span> {String(x).padStart(2, '0')}{' '}
+          / {String(y).padStart(2, '0')}
+        </div>
+        {showDrift && !!drift && (
+          <div className="Helm__hudLine Helm--drift">
+            <span className="Helm__hudKey">ENDS</span>{' '}
+            {String(drift.end.x).padStart(2, '0')} /{' '}
+            {String(drift.end.y).padStart(2, '0')} · {clockOf(drift.endMs)}
+          </div>
+        )}
+        {showDrift && !!drift?.intercept && (
+          <div
+            className={`Helm__hudLine ${
+              drift.intercept.contact.kind === 'hazard'
+                ? 'Helm--driftHazard'
+                : 'Helm--drift'
+            }`}
+          >
+            <span className="Helm__hudKey">PATH</span>{' '}
+            {drift.intercept.contact.name.toUpperCase()} ·{' '}
+            {clockOf(drift.intercept.ms)}
+          </div>
+        )}
+      </div>
+      <div
+        className="Helm__hud"
+        style={{ top: 8, right: 8, textAlign: 'right', zIndex: 10 }}
+      >
+        <div className="Helm__hudBig">{speed?.toFixed(1) ?? '0.0'}</div>
+        <div className="Helm__hudLine">
+          <span className="Helm__hudKey">SPM · TILE</span> {eta || '-'}
+        </div>
+      </div>
+      <div className="Helm__hud" style={{ bottom: 8, left: 8, zIndex: 10 }}>
+        <AutopilotZones />
+        <div className="Helm__hudLine" style={{ color: '#3d6a76' }}>
+          <span className="Helm__hudKey">SENSOR</span> {sensorRange} TILES
+        </div>
+        {!!autopilot?.engaged && (
+          <div className="Helm__course">
+            <span className="Helm__courseLabel">
+              AUTO · {autopilot.label ?? 'plotted position'}
+            </span>
+            {(autopilot.path?.length ?? 0) > 0 && (
+              <span
+                className="Helm__courseDist"
+                title="The green line and arrows show the remaining autopilot route"
+              >
+                Route: {autopilot.path.length} tiles
+              </span>
+            )}
+            {!!autopilot.dockOnArrival && (
+              <span className="Helm__courseDist">Dock on arrival</span>
+            )}
+            <button
+              type="button"
+              className="Helm__btn"
+              disabled={locked}
+              title="Stand the autopilot down and take manual control"
+              onClick={() => act('autopilot_cancel')}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        {!autopilot?.engaged && (
+          <div className="Helm__course">
+            <span className="Helm__courseStatus" style={{ marginTop: 0 }}>
+              {autopilot?.status
+                ? `AUTOPILOT OFF · ${autopilot.status}`
+                : 'AUTOPILOT'}
+            </span>
+          </div>
+        )}
+      </div>
+      <Box
+        position="absolute"
+        bottom="3.4em"
+        right="0.3em"
+        style={{ zIndex: 10 }}
+      >
         <Button
           icon="crosshairs"
           tooltip="Recentre on the ship"
@@ -379,10 +549,10 @@ export const Chart = () => {
       {!!hoveredContact && (
         <Box
           position="absolute"
-          bottom="0.5em"
-          left="0.5em"
+          top="0.5em"
+          left="50%"
           backgroundColor="black"
-          style={{ pointerEvents: 'none' }}
+          style={{ pointerEvents: 'none', transform: 'translateX(-50%)' }}
           px={0.5}
         >
           <b>{hoveredContact.name}</b> · {hoveredContact.dist}{' '}
