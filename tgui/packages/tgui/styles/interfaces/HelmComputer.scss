@@ -1866,18 +1866,24 @@ $caption: 1.6cqw;
   }
 }
 
+// Digits stack above the labelled metrics rather than beside them: at max speed
+// the number is wide enough that sharing a row with the labels clipped it.
 .Helm__velocity {
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
-  gap: 1cqw;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4cqw;
   padding: 0.9cqw;
 }
 
 .Helm__velBig {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.5cqw;
+  min-width: 0;
 }
 
 .Helm__velValue {

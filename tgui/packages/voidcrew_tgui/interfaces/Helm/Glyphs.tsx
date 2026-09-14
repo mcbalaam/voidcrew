@@ -350,7 +350,9 @@ export const ShipMark = (props: { size?: number; direction?: number }) => {
       viewBox="-8 -8 16 16"
       width={`${size}px`}
       height={`${size}px`}
-      style={{ overflow: 'visible' }}
+      // display:block drops the inline baseline gap that otherwise sat the mark
+      // a few pixels high of its tile centre in the chart.
+      style={{ display: 'block', overflow: 'visible' }}
       aria-hidden="true"
     >
       <g transform={direction ? `rotate(${direction})` : undefined}>

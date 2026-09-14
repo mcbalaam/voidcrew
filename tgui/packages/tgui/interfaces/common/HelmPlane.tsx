@@ -81,6 +81,12 @@ type HelmPlaneProps = {
   controls?: boolean;
   /** Extra class on the controls row, so a consumer can theme the buttons. */
   controlsClassName?: string;
+  /**
+   * Replaces the built-in centre-the-view button. Consumers that need a
+   * chart-scoped toggle in its slot (rather than a centre action) pass their
+   * own node; omitting it keeps the default control.
+   */
+  centerAction?: ReactNode;
   /** Rendered before the built-in controls, inside the same row (left slot). */
   controlsExtra?: ReactNode;
   /** Rendered after the built-in controls, inside the same row (right slot). */
@@ -147,6 +153,7 @@ function HelmPlaneInner(props: HelmPlaneProps) {
     centerOnInit = true,
     controls = true,
     controlsClassName,
+    centerAction,
     controlsExtra,
     controlsActions,
     minimap,
@@ -290,6 +297,7 @@ function HelmPlaneInner(props: HelmPlaneProps) {
             minimapAvailable={!!minimapConfig}
             minimapVisible={minimapVisible}
             className={controlsClassName}
+            center={centerAction}
             extra={controlsExtra}
             actions={controlsActions}
             onToggleMinimap={() => setMinimapVisible((value) => !value)}
@@ -339,6 +347,7 @@ function HelmPlaneControls(props: {
   minimapAvailable: boolean;
   minimapVisible: boolean;
   className?: string;
+  center?: ReactNode;
   extra?: ReactNode;
   actions?: ReactNode;
   onToggleMinimap: () => void;
@@ -351,6 +360,7 @@ function HelmPlaneControls(props: {
     minimapAvailable,
     minimapVisible,
     className,
+    center,
     extra,
     actions,
     onToggleMinimap,
@@ -379,17 +389,21 @@ function HelmPlaneControls(props: {
           }
         />
         <Button icon="plus" onClick={() => zoomIn(0.15)} />
-        <Button
-          className="HelmPlane__Controls--center"
-          icon="bullseye"
-          tooltip="Centre the view"
-          onClick={() => centerView()}
-        >
-          <div
-            className="HelmPlane__Controls--fill"
-            style={{ width: `${zoomFraction * 100}%` }}
-          />
-        </Button>
+        {center !== undefined ? (
+          center
+        ) : (
+          <Button
+            className="HelmPlane__Controls--center"
+            icon="bullseye"
+            tooltip="Centre the view"
+            onClick={() => centerView()}
+          >
+            <div
+              className="HelmPlane__Controls--fill"
+              style={{ width: `${zoomFraction * 100}%` }}
+            />
+          </Button>
+        )}
 
         {actions}
 

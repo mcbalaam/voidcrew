@@ -182,6 +182,9 @@ export const Chart = () => {
   // quantised and only on scale change, so panning never re-renders the SVG.
   const [cameraScale, setCameraScale] = useState(1);
   const gridOpacity = Math.max(0, Math.min(1, (cameraScale - 0.5) / 0.5));
+  // Opt-in labels for every ruin on the chart, so an unsurveyed field can be
+  // read without hovering each mark. Off by default; labels can crowd a busy map.
+  const [showRuinLabels, setShowRuinLabels] = useState(false);
 
   // Nodes anchor at the CENTRE of their tile, not its top-left corner.
   const toX = (tileX: number) => (tileX + 0.5) * TILE;
@@ -252,7 +255,10 @@ export const Chart = () => {
         y={py}
         selected={isSelected}
         tooltip={contact.name}
-        tooltipAlways={contact.kind === 'ship'}
+        tooltipAlways={
+          contact.kind === 'ship' ||
+          (showRuinLabels && contact.kind === 'ruin')
+        }
         onClick={() => select(keyRef)}
         onContextMenu={(event) => {
           event.preventDefault();
@@ -334,7 +340,7 @@ export const Chart = () => {
       {!autopilot?.engaged && (
         <div className="Helm__course">
           <span className="Helm__courseStatus">
-            {autopilot?.status ? `MANUAL · ${autopilot.status}` : 'A/P'}
+            {autopilot?.status ? `MANUAL · ${autopilot.status}` : 'MANUAL'}
           </span>
         </div>
       )}
@@ -344,6 +350,21 @@ export const Chart = () => {
   // Autopilot on the left of the strip; the map's own controls and the ship
   // recentre all sit to the right.
   const controlsExtra = autopilotReadout;
+
+  // Takes the built-in centre-the-view button's slot: a chart-scoped toggle for
+  // always-on ruin labels instead.
+  const controlsCenter = (
+    <Button
+      icon="tags"
+      selected={showRuinLabels}
+      tooltip={
+        showRuinLabels
+          ? 'Hide labels on every ruin'
+          : 'Label every ruin on the chart'
+      }
+      onClick={() => setShowRuinLabels((value) => !value)}
+    />
+  );
 
   const controlsActions = (
     <Button
@@ -367,6 +388,7 @@ export const Chart = () => {
         maxScale={3}
         focus={focus}
         controlsClassName="Helm__chartControls"
+        centerAction={controlsCenter}
         controlsExtra={controlsExtra}
         controlsActions={controlsActions}
         storageKey="helm-chart-camera"
@@ -397,11 +419,15 @@ export const Chart = () => {
                 pointerEvents: 'none',
               }}
             >
+              {/* Zone bands, drawn as nested discs largest first so each reads
+                  as an annulus. Matches get_zone_band_for_turf(): the outer
+                  ring is the safe green zone, the ring against the sun is red.
+                  Nothing is painted past the outer circle. */}
               <circle
                 cx={toX(centre)}
                 cy={toY(centre)}
                 r={maxRadius * TILE}
-                fill="rgba(207, 74, 56, 0.05)"
+                fill="rgba(89, 184, 113, 0.06)"
               />
               <circle
                 cx={toX(centre)}
@@ -413,7 +439,7 @@ export const Chart = () => {
                 cx={toX(centre)}
                 cy={toY(centre)}
                 r={maxRadius * (chart?.ringInner ?? 0.33) * TILE}
-                fill="rgba(89, 184, 113, 0.06)"
+                fill="rgba(207, 74, 56, 0.06)"
               />
               {[1, 0.66, 0.33].map((ratio) => (
                 <circle
@@ -444,6 +470,29 @@ export const Chart = () => {
                   />
                 </Fragment>
               ))}
+              <defs>
+                <radialGradient id="helm-sun-bloom">
+                  <stop offset="0%" stopColor={SHIP_TINT} stopOpacity={0.5} />
+                  <stop
+                    offset="45%"
+                    stopColor={SHIP_TINT}
+                    stopOpacity={0.16}
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={SHIP_TINT}
+                    stopOpacity={0}
+                  />
+                </radialGradient>
+              </defs>
+              {/* A soft halo around the sun so its disc reads as glowing rather
+                  than as a flat pip. */}
+              <circle
+                cx={toX(centre)}
+                cy={toY(centre)}
+                r={TILE * 5}
+                fill="url(#helm-sun-bloom)"
+              />
               <circle
                 cx={toX(centre)}
                 cy={toY(centre)}
@@ -637,11 +686,9 @@ export const Chart = () => {
           <span className="Helm__hudKey">SPM · TILE</span> {eta || '-'}
         </div>
       </div>
-      <div
-        className="Helm__hud Helm__hud--row"
-        style={{ bottom: '3cqw', left: 8, zIndex: 10 }}
-      >
-        <AutopilotZones />
+      {/* Flight readouts sit in the chart's top-left corner, away from the
+          zoom/pan controls along the bottom and the speed slab on the right. */}
+      <div className="Helm__hud Helm--tl" style={{ zIndex: 10 }}>
         <div className="Helm__readouts">
           <div className="Helm__hudLine">
             <span className="Helm__hudKey">HDG</span>{' '}
@@ -678,6 +725,12 @@ export const Chart = () => {
             </div>
           )}
         </div>
+      </div>
+      <div
+        className="Helm__hud Helm__hud--row"
+        style={{ bottom: '3cqw', left: 8, zIndex: 10 }}
+      >
+        <AutopilotZones />
       </div>
       {!!hoveredContact && (
         <Box
