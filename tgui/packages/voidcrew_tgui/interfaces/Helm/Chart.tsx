@@ -18,6 +18,7 @@ import {
   BURN_NONE,
   BURN_STOP,
   type Contact,
+  type ContactKind,
   type Data,
   DIR_VECTOR,
 } from './data';
@@ -43,6 +44,13 @@ const TILE = 26;
 const WRAP_MARGIN = 8;
 
 const SHIP_TINT = '#e0a72c';
+
+/**
+ * Contact families the label toggle keeps pinned open. Settlements and planets
+ * join ruins: all three are places a crew plots a course toward, and reading
+ * their names off the chart beats hovering each mark.
+ */
+const LABEL_KINDS: ContactKind[] = ['ruin', 'planet', 'outpost'];
 
 /** 0 = up (north), clockwise. */
 const courseAngle = (dir: number) => {
@@ -182,9 +190,10 @@ export const Chart = () => {
   // quantised and only on scale change, so panning never re-renders the SVG.
   const [cameraScale, setCameraScale] = useState(1);
   const gridOpacity = Math.max(0, Math.min(1, (cameraScale - 0.5) / 0.5));
-  // Opt-in labels for every ruin on the chart, so an unsurveyed field can be
-  // read without hovering each mark. Off by default; labels can crowd a busy map.
-  const [showRuinLabels, setShowRuinLabels] = useState(false);
+  // Opt-in always-on labels for the places a crew flies to (ruins, planets and
+  // trader outposts), so they can be read without hovering each mark. Off by
+  // default; labels can crowd a busy map.
+  const [showLabels, setShowLabels] = useState(false);
 
   // Nodes anchor at the CENTRE of their tile, not its top-left corner.
   const toX = (tileX: number) => (tileX + 0.5) * TILE;
@@ -257,7 +266,7 @@ export const Chart = () => {
         tooltip={contact.name}
         tooltipAlways={
           contact.kind === 'ship' ||
-          (showRuinLabels && contact.kind === 'ruin')
+          (showLabels && LABEL_KINDS.includes(contact.kind))
         }
         onClick={() => select(keyRef)}
         onContextMenu={(event) => {
@@ -352,17 +361,17 @@ export const Chart = () => {
   const controlsExtra = autopilotReadout;
 
   // Takes the built-in centre-the-view button's slot: a chart-scoped toggle for
-  // always-on ruin labels instead.
+  // always-on labels on ruins, planets and trader outposts instead.
   const controlsCenter = (
     <Button
       icon="tags"
-      selected={showRuinLabels}
+      selected={showLabels}
       tooltip={
-        showRuinLabels
-          ? 'Hide labels on every ruin'
-          : 'Label every ruin on the chart'
+        showLabels
+          ? 'Hide labels on ruins, planets and outposts'
+          : 'Label every ruin, planet and outpost on the chart'
       }
-      onClick={() => setShowRuinLabels((value) => !value)}
+      onClick={() => setShowLabels((value) => !value)}
     />
   );
 
