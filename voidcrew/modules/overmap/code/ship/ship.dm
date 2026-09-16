@@ -228,7 +228,7 @@
 	// own slots so the first entry (the captain) stays the supervisor
 	if(source_template.has_upgrade_slots)
 		var/list/slot_ids = selected_theme?.upgrade_slot_ids || source_template.upgrade_slot_ids
-		job_slot_definitions += get_module_job_definitions(source_template.type, upgrade_selections, slot_ids)
+		job_slot_definitions += get_module_job_definitions(source_template.type, upgrade_selections, slot_ids, selected_theme?.id)
 
 	job_slots = assemble_job_slots_from_list(job_slot_definitions)
 

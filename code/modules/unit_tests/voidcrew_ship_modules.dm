@@ -207,3 +207,25 @@
 
 #undef SHIP_MODULE_MAP_ROOT
 #undef SHIP_PREVIEW_ROOT
+
+/datum/unit_test/voidcrew_room_crew_variants/Run()
+	var/datum/ship_upgrade_module/module = allocate(/datum/ship_upgrade_module)
+	var/list/shared = list(list(name = "Engineer", slots = 2))
+	var/list/independent = list(list(name = "Medic", slots = 3))
+	module.job_slots_add = shared
+	module.job_slots_add_by_theme = list("medical" = independent, "empty" = list())
+	var/list/selections = list("bay" = module)
+	var/list/slots = list("bay")
+	var/list/actual = get_module_job_definitions(null, selections, slots, "standard")
+	TEST_ASSERT_EQUAL(actual.len, 1, "a variant without an override lost its existing room crew")
+	TEST_ASSERT_EQUAL(actual[1], shared[1], "a variant without an override did not use its existing room crew")
+	actual = get_module_job_definitions(null, selections, slots, "medical")
+	TEST_ASSERT_EQUAL(actual.len, 1, "the independent roster was added to the shared roster")
+	TEST_ASSERT_EQUAL(actual[1], independent[1], "the selected variant did not use its own crew")
+	actual = get_module_job_definitions(null, selections, slots, "empty")
+	TEST_ASSERT_EQUAL(actual.len, 0, "an explicitly empty roster fell back to shared crew")
+	actual = get_module_job_definitions(null, selections, slots)
+	TEST_ASSERT_EQUAL(actual[1], shared[1], "themeless ships lost their existing roster")
+	module.job_slots_add_by_theme -= "medical"
+	actual = get_module_job_definitions(null, selections, slots, "medical")
+	TEST_ASSERT_EQUAL(actual[1], shared[1], "removing an override did not restore the existing room crew")

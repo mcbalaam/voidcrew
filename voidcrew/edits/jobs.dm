@@ -40,6 +40,12 @@
 			var/datum/ship_upgrade_module/module = modules[module_id]
 			if(length(module.job_slots_add))
 				definitions += module.job_slots_add
+			for(var/theme_id in module.job_slots_add_by_theme)
+				if(!is_module_available_for_theme(module, theme_id))
+					continue
+				var/list/variant_crew = module.job_slots_add_by_theme[theme_id]
+				if(length(variant_crew))
+					definitions += variant_crew
 
 	return assemble_job_slots_from_list(definitions)
 
