@@ -40,6 +40,7 @@ import {
 
 /** Map-space pixels per overmap tile. */
 const TILE = 26;
+const MAP_PADDING = TILE * 10;
 /** How far around the ship wrapped contact copies are drawn, in tiles. */
 const WRAP_MARGIN = 8;
 
@@ -394,13 +395,14 @@ export const Chart = () => {
       <HelmPlane
         mapWidth={mapPx}
         mapHeight={mapPx}
+        padding={MAP_PADDING}
         maxScale={3}
         focus={focus}
         controlsClassName="Helm__chartControls"
         centerAction={controlsCenter}
         controlsExtra={controlsExtra}
         controlsActions={controlsActions}
-        storageKey="helm-chart-camera"
+        initialFocus={{ x: shipPx.x, y: shipPx.y }}
         onTransform={(camera) => {
           const next = Math.round(camera.scale * 100) / 100;
           setCameraScale((prev) => (prev === next ? prev : next));
@@ -482,16 +484,8 @@ export const Chart = () => {
               <defs>
                 <radialGradient id="helm-sun-bloom">
                   <stop offset="0%" stopColor={SHIP_TINT} stopOpacity={0.5} />
-                  <stop
-                    offset="45%"
-                    stopColor={SHIP_TINT}
-                    stopOpacity={0.16}
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor={SHIP_TINT}
-                    stopOpacity={0}
-                  />
+                  <stop offset="45%" stopColor={SHIP_TINT} stopOpacity={0.16} />
+                  <stop offset="100%" stopColor={SHIP_TINT} stopOpacity={0} />
                 </radialGradient>
               </defs>
               {/* A soft halo around the sun so its disc reads as glowing rather

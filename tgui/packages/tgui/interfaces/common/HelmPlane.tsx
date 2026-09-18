@@ -61,6 +61,7 @@ type HelmPlaneProps = {
   /** Map-space size in pixels. */
   mapWidth: number;
   mapHeight: number;
+  padding?: number;
   /** Fills the map-space, behind every node. */
   background?: ReactNode;
   /** Drawn in the stage, behind the map plane itself (e.g. a vignette). */
@@ -77,6 +78,7 @@ type HelmPlaneProps = {
   fitOnInit?: boolean;
   /** Centre the map on init. Default true. */
   centerOnInit?: boolean;
+  initialFocus?: { x: number; y: number } | null;
   /** Render the zoom controls. Default true. */
   controls?: boolean;
   /** Extra class on the controls row, so a consumer can theme the buttons. */
@@ -143,6 +145,7 @@ function HelmPlaneInner(props: HelmPlaneProps) {
   const {
     mapWidth,
     mapHeight,
+    padding = 0,
     background,
     stageBackground,
     children,
@@ -151,6 +154,7 @@ function HelmPlaneInner(props: HelmPlaneProps) {
     initialScale,
     fitOnInit = true,
     centerOnInit = true,
+    initialFocus,
     controls = true,
     controlsClassName,
     centerAction,
@@ -225,6 +229,8 @@ function HelmPlaneInner(props: HelmPlaneProps) {
   };
 
   const resolvedMinScale = minScale ?? fitFloor ?? 0.01;
+  const contentWidth = mapWidth + padding * 2;
+  const contentHeight = mapHeight + padding * 2;
 
   return (
     <TransformWrapper
@@ -253,22 +259,44 @@ function HelmPlaneInner(props: HelmPlaneProps) {
       autoAlignment={{ disabled: true }}
       onTransform={handleTransform}
     >
-      <HelmPlaneFocus focus={focus} duration={focusDuration} />
+      <HelmPlaneFocus
+        focus={focus}
+        duration={focusDuration}
+        initial={initialFocus}
+        initialScale={initialScale}
+        padding={padding}
+      />
       <div className={classes(['HelmPlane', className])}>
         <div className="HelmPlane__Stage">
           {stageBackground}
           <TransformComponent
             wrapperStyle={{ width: '100%', height: '100%' }}
-            contentStyle={{ width: `${mapWidth}px`, height: `${mapHeight}px` }}
+            contentStyle={{
+              width: `${contentWidth}px`,
+              height: `${contentHeight}px`,
+            }}
           >
             <div
               className="HelmPlane__Map"
-              style={{ width: `${mapWidth}px`, height: `${mapHeight}px` }}
+              style={{
+                width: `${contentWidth}px`,
+                height: `${contentHeight}px`,
+              }}
             >
-              {!!background && (
-                <div className="HelmPlane__Background">{background}</div>
-              )}
-              {children}
+              <div
+                className="HelmPlane__Inner"
+                style={{
+                  left: `${padding}px`,
+                  top: `${padding}px`,
+                  width: `${mapWidth}px`,
+                  height: `${mapHeight}px`,
+                }}
+              >
+                {!!background && (
+                  <div className="HelmPlane__Background">{background}</div>
+                )}
+                {children}
+              </div>
             </div>
           </TransformComponent>
         </div>
@@ -311,9 +339,39 @@ function HelmPlaneInner(props: HelmPlaneProps) {
 function HelmPlaneFocus(props: {
   focus?: { x: number; y: number; nonce: number } | null;
   duration?: number;
+  initial?: { x: number; y: number } | null;
+  initialScale?: number;
+  padding?: number;
 }) {
   const { setTransform, instance } = useControls();
   const served = useRef(0);
+  const initialServed = useRef(false);
+  // The map's origin sits `padding` into the bounded content box, so map-space
+  // points have to be offset by it before they are centred.
+  const pad = props.padding ?? 0;
+
+  useEffect(() => {
+    if (initialServed.current || !props.initial) {
+      return;
+    }
+    const wrapper = instance.wrapperComponent;
+    if (!wrapper) {
+      return;
+    }
+    const rect = wrapper.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      return;
+    }
+    initialServed.current = true;
+    const scale = props.initialScale ?? 1;
+    setTransform(
+      rect.width / 2 - (pad + props.initial.x) * scale,
+      rect.height / 2 - (pad + props.initial.y) * scale,
+      scale,
+      0,
+      'easeOut',
+    );
+  }, [props.initial, props.initialScale, pad, instance, setTransform]);
 
   useEffect(() => {
     const request = props.focus;
@@ -329,13 +387,13 @@ function HelmPlaneFocus(props: {
     const scale = instance.state.scale;
     // Center the map-space point in the viewport at the current zoom.
     setTransform(
-      rect.width / 2 - request.x * scale,
-      rect.height / 2 - request.y * scale,
+      rect.width / 2 - (pad + request.x) * scale,
+      rect.height / 2 - (pad + request.y) * scale,
       scale,
       props.duration ?? 260,
       'easeOut',
     );
-  }, [props.focus, props.duration, instance, setTransform]);
+  }, [props.focus, props.duration, pad, instance, setTransform]);
 
   return null;
 }
@@ -352,7 +410,14 @@ function HelmPlaneControls(props: {
   actions?: ReactNode;
   onToggleMinimap: () => void;
 }) {
-  const { zoomIn, zoomOut, centerView, setTransform, instance } = useControls();
+  const {
+    zoomIn,
+    zoomOut,
+    centerView,
+    setTransform,
+    clientToContent,
+    instance,
+  } = useControls();
   const {
     scale,
     minScale,
@@ -378,15 +443,25 @@ function HelmPlaneControls(props: {
         <Button
           icon="refresh"
           tooltip="Reset zoom to 1x"
-          onClick={() =>
+          onClick={() => {
+            const wrapper = instance.wrapperComponent;
+            if (!wrapper) {
+              return;
+            }
+            const rect = wrapper.getBoundingClientRect();
+
+            const centre = clientToContent(
+              rect.left + rect.width / 2,
+              rect.top + rect.height / 2,
+            );
             setTransform(
-              instance.state.positionX,
-              instance.state.positionY,
+              rect.width / 2 - centre.x,
+              rect.height / 2 - centre.y,
               1,
               200,
               'easeOut',
-            )
-          }
+            );
+          }}
         />
         <Button icon="plus" onClick={() => zoomIn(0.15)} />
         {center !== undefined ? (

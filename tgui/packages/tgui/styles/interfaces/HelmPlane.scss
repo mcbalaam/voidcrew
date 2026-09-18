@@ -20,6 +20,10 @@
     position: relative;
   }
 
+  &__Inner {
+    position: absolute;
+  }
+
   &__Background {
     position: absolute;
     inset: 0;
