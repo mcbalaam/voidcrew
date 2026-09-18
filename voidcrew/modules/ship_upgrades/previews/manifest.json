@@ -227,7 +227,7 @@
      7
     ]
    },
-   "src_md5": "2af4b68ab397631f8c74480d2fa612ee"
+   "src_md5": "09796ee032e8749cddd344630639bbf1"
   },
   "kilo_b": {
    "png": "ship_kilo_b.png",
@@ -247,7 +247,7 @@
      7
     ]
    },
-   "src_md5": "a1c85c7047c3fca6c21cc45f431b04f0"
+   "src_md5": "00d98af180647014875aa298ae5a2210"
   },
   "kilo_c": {
    "png": "ship_kilo_c.png",
@@ -267,7 +267,7 @@
      7
     ]
    },
-   "src_md5": "eb53bd833146914a6282b06611d60ca8"
+   "src_md5": "649b4433ed18392982c1c1c566ef1ea2"
   },
   "kilo_d": {
    "png": "ship_kilo_d.png",
@@ -287,7 +287,7 @@
      7
     ]
    },
-   "src_md5": "c94b1963573afb99a371e0406dd2ba84"
+   "src_md5": "cfbbc8e989d046040e70d5f5f15976c7"
   },
   "nano_phalanx_a": {
    "png": "ship_nano_phalanx_a.png",
@@ -442,7 +442,7 @@
      7
     ]
    },
-   "src_md5": "5f38590742794e6cfe7660b5c984eb3e"
+   "src_md5": "df7344b3ef406e640d1fef565058234c"
   },
   "scarab_b": {
    "png": "ship_scarab_b.png",
@@ -466,7 +466,7 @@
      7
     ]
    },
-   "src_md5": "8e2b39eebdb2cd59c2b18f890cbe4b08"
+   "src_md5": "363697945e0f5d6c93f4238c0d4a0916"
   },
   "scarab_c": {
    "png": "ship_scarab_c.png",
@@ -490,7 +490,7 @@
      7
     ]
    },
-   "src_md5": "250efd19fcf01d79756a98e68ca8af2e"
+   "src_md5": "f9c0406dac6267d3f0b450e7fd30e604"
   },
   "test_modular": {
    "png": "ship_test_modular.png",

@@ -34,6 +34,16 @@ type Port = {
   width: number;
   height: number;
   status: string;
+  location: string | null;
+};
+
+type Player = {
+  ref: string;
+  name: string;
+  ckey: string | null;
+  location: string;
+  connected: BooleanLike;
+  dead: BooleanLike;
 };
 
 type Details = Contact & {
@@ -43,6 +53,7 @@ type Details = Contact & {
   is_ship: BooleanLike;
   has_interior: BooleanLike;
   supports_interior: BooleanLike;
+  supports_unload: BooleanLike;
   load_blocker: string | null;
   unload_blocker: string | null;
   delete_blocker: string | null;
@@ -50,6 +61,7 @@ type Details = Contact & {
   can_jump: BooleanLike;
   ports: Port[];
   ships: { ref: string; name: string; status: string }[];
+  players: Player[] | null;
   cleanup: {
     title: string;
     reason: string | null;
@@ -138,9 +150,6 @@ export const OvermapManagement = () => {
                   onClick={() => setShowSpawn(!showSpawn)}
                 >
                   Spawn new
-                </Button>
-                <Button icon="building" onClick={() => act('outposts')}>
-                  Manage outposts
                 </Button>
               </Stack.Item>
             </Stack>
@@ -394,6 +403,7 @@ const ContactDetails = ({ contact }: { contact: Details }) => {
     !contact.busy &&
     contact.has_interior &&
     contact.supports_interior &&
+    contact.supports_unload &&
     contact.unload_blocker
   ) {
     blockers.set(contact.unload_blocker, ['unload']);
@@ -462,29 +472,30 @@ const ContactDetails = ({ contact }: { contact: Details }) => {
           </Box>
         )}
         <Stack wrap mt={1}>
-          {!!contact.supports_interior && (
-            <Stack.Item>
-              {contact.has_interior ? (
-                <Button
-                  icon="eject"
-                  disabled={!!contact.busy || !!contact.unload_blocker}
-                  tooltip={contact.unload_blocker || contact.unload_effect}
-                  onClick={() => act('unload', target)}
-                >
-                  Unload interior
-                </Button>
-              ) : (
-                <Button
-                  icon="download"
-                  disabled={!!contact.busy || !!contact.load_blocker}
-                  tooltip={contact.load_blocker || undefined}
-                  onClick={() => act('load', target)}
-                >
-                  Load interior
-                </Button>
-              )}
-            </Stack.Item>
-          )}
+          {!!contact.supports_interior &&
+            (!contact.has_interior || !!contact.supports_unload) && (
+              <Stack.Item>
+                {contact.has_interior ? (
+                  <Button
+                    icon="eject"
+                    disabled={!!contact.busy || !!contact.unload_blocker}
+                    tooltip={contact.unload_blocker || contact.unload_effect}
+                    onClick={() => act('unload', target)}
+                  >
+                    Unload interior
+                  </Button>
+                ) : (
+                  <Button
+                    icon="download"
+                    disabled={!!contact.busy || !!contact.load_blocker}
+                    tooltip={contact.load_blocker || undefined}
+                    onClick={() => act('load', target)}
+                  >
+                    Load interior
+                  </Button>
+                )}
+              </Stack.Item>
+            )}
           <Stack.Item>
             <Button
               icon="trash"
@@ -501,6 +512,41 @@ const ContactDetails = ({ contact }: { contact: Details }) => {
           </Stack.Item>
         </Stack>
       </Section>
+
+      {contact.players !== null && (
+        <Section title={`Players at outpost (${contact.players.length})`}>
+          <Box color="label" mb={0.5}>
+            Concourse:{' '}
+            {
+              contact.players.filter(
+                (player) => player.location === 'Concourse',
+              ).length
+            }
+            {' · Hangars: '}
+            {
+              contact.players.filter(
+                (player) => player.location !== 'Concourse',
+              ).length
+            }
+          </Box>
+          {contact.players.length === 0 ? (
+            <Box>No player bodies in the concourse or hangars.</Box>
+          ) : (
+            contact.players.map((player) => (
+              <Box key={player.ref} mb={0.5} style={wrapping}>
+                <Box bold>
+                  {player.name}
+                  {player.ckey ? ` (${player.ckey})` : ''}
+                </Box>
+                <Box color="label">
+                  {player.location} · {player.connected ? 'Online' : 'Offline'}
+                  {player.dead ? ' · Dead' : ''}
+                </Box>
+              </Box>
+            ))
+          )}
+        </Section>
+      )}
 
       {contact.ships.length > 0 && (
         <Section title={`Ships here (${contact.ships.length})`}>
@@ -538,6 +584,16 @@ const ContactDetails = ({ contact }: { contact: Details }) => {
                 <Box color="label" style={wrapping}>
                   {port.status}
                 </Box>
+                {contact.players !== null && !!port.location && (
+                  <Box>
+                    Players:{' '}
+                    {
+                      contact.players.filter(
+                        (player) => player.location === port.location,
+                      ).length
+                    }
+                  </Box>
+                )}
               </Stack.Item>
               <Stack.Item>
                 <Button

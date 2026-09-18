@@ -166,3 +166,103 @@
 	panel.watch_load(planet)
 	panel.site_load_finished(planet, TRUE)
 	TEST_ASSERT(panel.notice && !panel.error, "A completed load left a stale error in the panel")
+
+/// Real trader interiors and hangars exercise both the admin readout and reservation teardown.
+/datum/unit_test/voidcrew_trader_management/Run()
+	var/mob/living/basic/operator = allocate(/mob/living/basic)
+	var/datum/overmap_management/panel = allocate(/datum/overmap_management, operator)
+	panel.build_spawn_catalog()
+	var/list/expected = list(
+		/obj/structure/overmap/trader_outpost/black_market,
+		/obj/structure/overmap/trader_outpost/outfitter,
+		/obj/structure/overmap/trader_outpost/general,
+	)
+	for(var/id in panel.spawn_catalog)
+		var/list/option = panel.spawn_catalog[id]
+		if(option["category"] != "Trader outposts")
+			continue
+		var/path = option["path"]
+		TEST_ASSERT(path in expected, "The trader catalog contains an unexpected or duplicate variant")
+		expected -= path
+		var/obj/structure/overmap/trader_outpost/outpost = allocate(path)
+		TEST_ASSERT_EQUAL(option["name"], outpost.admin_name(), "The trader catalog did not use the shop's outpost name")
+		TEST_ASSERT_NULL(outpost.admin_load_blocker(), "A fresh trader could not be loaded")
+		TEST_ASSERT_NULL(outpost.admin_delete_blocker(), "An unloaded trader could not be deleted")
+		TEST_ASSERT(!outpost.admin_is_active(), "An unloaded trader was reported as active")
+		outpost.loading = TRUE
+		TEST_ASSERT(outpost.admin_load_blocker() && outpost.admin_delete_blocker(), "Loading allowed a concurrent trader operation")
+		outpost.loading = FALSE
+		panel.watch_load(outpost)
+		outpost.start_level_load(operator)
+		var/load_deadline = world.time + 1 MINUTES
+		UNTIL(!outpost.is_loading() || world.time >= load_deadline)
+		TEST_ASSERT(outpost.is_loaded(), "Trader interior failed to load")
+		TEST_ASSERT(panel.notice && !panel.error, "Trader load completion did not reach the admin panel")
+		TEST_ASSERT(outpost.admin_load_blocker(), "The panel offered to load an already loaded trader")
+		TEST_ASSERT_NULL(outpost.admin_delete_blocker(), "Uncontrolled trader NPCs prevented deletion")
+		TEST_ASSERT_EQUAL(outpost.admin_interior_turf(), outpost.template_bottom_left, "The trader interior could not be visited")
+		var/list/details = panel.contact_details(outpost)
+		TEST_ASSERT(details["has_interior"] && details["supports_interior"] && !details["supports_unload"], "Trader interior controls have the wrong capabilities")
+		TEST_ASSERT_EQUAL(length(details["players"]), 0, "Uncontrolled NPCs were counted as players")
+		var/datum/turf_reservation/concourse = outpost.reservation
+		var/datum/map_template/template = outpost.outpost_template
+		qdel(outpost)
+		TEST_ASSERT(QDELETED(concourse) && QDELETED(template), "Trader deletion leaked its concourse or template")
+		TEST_ASSERT(!(outpost in GLOB.trader_outposts) && !(outpost in GLOB.overmap_objects), "Deleted trader remained in an overmap registry")
+	TEST_ASSERT_EQUAL(length(expected), 0, "The trader catalog omitted a variant")
+
+	var/obj/structure/overmap/trader_outpost/outpost = allocate(/obj/structure/overmap/trader_outpost/general)
+	// An invalid template must report failure, clear loading, and allow a retry.
+	outpost.outpost_template = new /datum/map_template/trader_outpost
+	panel.watch_load(outpost)
+	TEST_ASSERT(!outpost.load_level(), "An invalid trader template reported success")
+	TEST_ASSERT(panel.error && !panel.notice && !outpost.is_loading(), "A failed trader load left the panel waiting")
+	TEST_ASSERT_NULL(outpost.reservation, "A failed load retained a reservation")
+	QDEL_NULL(outpost.outpost_template)
+	TEST_ASSERT(outpost.load_level(), "Could not load the occupancy fixture")
+	var/mob/living/basic/player = allocate(/mob/living/basic, outpost.template_bottom_left)
+	player.mind_initialize()
+	var/list/locations = outpost.admin_player_locations()
+	TEST_ASSERT_EQUAL(locations[player], "Concourse", "An offline player body was missed in the concourse")
+	TEST_ASSERT(outpost.admin_delete_blocker(), "An offline player did not block deletion")
+	player.forceMove(run_loc_floor_bottom_left)
+	TEST_ASSERT_NULL(outpost.admin_delete_blocker(), "A player outside the outpost prevented deletion")
+
+	var/obj/structure/overmap/ship/visitor = allocate(/obj/structure/overmap/ship)
+	SSovermap.simulated_ships |= visitor
+	visitor.pending_dock_target = outpost
+	TEST_ASSERT(outpost.admin_delete_blocker(), "An approaching ship did not block trader deletion")
+	visitor.pending_dock_target = null
+	var/datum/outpost_berth/berth = outpost.allocate_berth(visitor)
+	TEST_ASSERT_NOTNULL(berth, "Could not allocate the hangar fixture")
+	TEST_ASSERT(outpost.admin_delete_blocker(), "An assigned hangar did not block deletion before the ship arrived")
+	// Leave an unassigned hangar so only its occupant, not a ship, holds deletion.
+	// Fork signal defines are included after unit tests.
+	berth.UnregisterSignal(visitor, list("voidcrew_ship_docked", COMSIG_QDELETING))
+	berth.ship = null
+	var/turf/hangar_turf = berth.alcove_turfs[1]
+	var/obj/structure/closet/container = allocate(/obj/structure/closet, hangar_turf)
+	player.forceMove(container)
+	locations = outpost.admin_player_locations()
+	TEST_ASSERT_EQUAL(locations[player], "Hangar 1", "A player inside a hangar container was missed")
+	TEST_ASSERT(outpost.admin_delete_blocker(), "A hangar occupant did not block deletion")
+	player.death()
+	locations = outpost.admin_player_locations()
+	TEST_ASSERT_EQUAL(locations[player], "Hangar 1", "A dead player body was missed in the hangar")
+	var/list/details = panel.contact_details(outpost)
+	var/list/players = details["players"]
+	TEST_ASSERT_EQUAL(length(players), 1, "The hangar occupant was missing or double-counted in the UI")
+	var/list/player_details = players[1]
+	TEST_ASSERT(player_details["dead"] && !player_details["connected"], "The UI did not report the offline body's state")
+	var/list/ports = details["ports"]
+	var/list/port = ports[1]
+	TEST_ASSERT_EQUAL(port["location"], player_details["location"], "The body was not associated with its docking bay")
+	var/turf/outside = get_step(berth.reservation.top_right_turfs[1], EAST)
+	player.forceMove(outside)
+	TEST_ASSERT_EQUAL(length(outpost.admin_player_locations()), 0, "A neighbouring turf on the same z-level was counted as occupied")
+	TEST_ASSERT_NULL(outpost.admin_delete_blocker(), "An empty hangar prevented deletion")
+	player.forceMove(run_loc_floor_bottom_left)
+	var/datum/turf_reservation/hangar = berth.reservation
+	var/datum/turf_reservation/concourse = outpost.reservation
+	qdel(outpost)
+	TEST_ASSERT(QDELETED(berth) && QDELETED(hangar) && QDELETED(concourse), "Trader deletion leaked a concourse or hangar reservation")

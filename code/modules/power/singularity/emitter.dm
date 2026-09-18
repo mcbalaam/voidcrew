@@ -192,10 +192,27 @@
 	var/power_usage = active_power_usage * seconds_per_tick
 	if(machine_stat & (BROKEN))
 		return
-	if(!welded || (!powernet && power_usage))
+	if(!welded)
 		active = FALSE
 		update_appearance()
 		return
+	if(!powernet && power_usage)
+		// VOIDCREW EDIT CHANGE - original: `if(!welded || (!powernet && power_usage))` above.
+		// A ship jump severs the hull cables of any net that reaches past the hull in
+		// cable/beforeShuttleMove() (self-contained nets now travel intact, see
+		// powernet_leaves_hull()) and only rebuilds them in lateShuttleMove(), several ticks
+		// later on a big hull. Upstream flips the emitter off the moment it sees no powernet,
+		// so a jump silently switched off the emitters and the containment fields they feed
+		// collapsed ~2 minutes later. While the node cable is still underneath the net is
+		// merely being rebuilt: reconnect or wait. Only an actually missing cable turns the
+		// emitter off.
+		var/turf/here = loc
+		if(!connect_to_network() && isturf(here) && here.get_cable_node(cable_layer))
+			return
+		if(!powernet)
+			active = FALSE
+			update_appearance()
+			return
 	if(!active)
 		return
 	if(power_usage && surplus() < power_usage)

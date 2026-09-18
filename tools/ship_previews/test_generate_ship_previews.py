@@ -1,9 +1,82 @@
 import re
+import contextlib
+import io
+import json
+from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from PIL import Image, ImageChops
 
 import generate_ship_previews as previews
+
+
+class ModuleDiscoveryTests(unittest.TestCase):
+    def test_workshop_and_nested_registrations_are_discovered_once(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            ships = root / "ships"
+            workshop = root / "workshop"
+            (ships / "nested").mkdir(parents=True)
+            (workshop / "nested").mkdir(parents=True)
+            (ships / "delta.dm").write_text('map_file = "delta/cabins.dmm"\n')
+            (ships / "nested/extra.dm").write_text('map_file = "delta/lab.dmm"\n')
+            (workshop / "bogatyr.dm").write_text(
+                '/datum/ship_upgrade_module/workshop_bogatyr_engineering\n'
+                '\tmap_file = "bogatyr/workshop/engineering_basic.dmm"\n')
+            (workshop / "nested/extra.dm").write_text(
+                '\tmap_file = "bogatyr/workshop/engineering_basic.dmm"\n'
+                '\tmap_file = "bogatyr/workshop/surgical_suite.dmm"\n')
+            (root / "unrelated.dm").write_text('map_file = "unrelated.dmm"\n')
+            with patch.object(previews, "SHIP_DM_DIR", ships):
+                self.assertEqual(previews.collect_base_module_files(), [
+                    "delta/cabins.dmm", "delta/lab.dmm",
+                    "bogatyr/workshop/engineering_basic.dmm", "bogatyr/workshop/surgical_suite.dmm",
+                ])
+
+    def test_workshop_modules_and_theme_only_options_reach_manifest(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            ships = root / "voidcrew/modules/ship_upgrades/ships"
+            workshop = ships.parent / "workshop"
+            workshop.mkdir(parents=True)
+            ships.mkdir()
+            maps = root / "_maps/voidcrew/ship_modules"
+            rooms = maps / "bogatyr/workshop"
+            rooms.mkdir(parents=True)
+            (workshop / "bogatyr.dm").write_text(
+                '/datum/ship_upgrade_module/workshop_bogatyr_engineering\n'
+                '\tmap_file = "bogatyr/workshop/engineering_basic.dmm"\n'
+                '/datum/ship_upgrade_module/workshop_bogatyr_surgery\n'
+                '\tmap_file = "bogatyr/workshop/surgical_suite.dmm"\n')
+            names = ["engineering_basic", "engineering_basic_freshen_up", "engineering_basic_nightclub", "surgical_suite_nightclub", "surgical_suite_trashed"]
+            for name in names:
+                (rooms / (name + ".dmm")).write_text(
+                    '"a" = (/obj/modular_map_connector,/turf/open/floor/plating,/area/template_noop)\n'
+                    '(1,1,1) = {"\na\n"}\n')
+            output = root / "previews"
+            rendered = []
+
+            def render(tool, source, destination, temp, dmm):
+                rendered.append(source.stem)
+                Image.new("RGBA", (32, 32), (80, 100, 120, 255)).save(destination)
+
+            with patch.multiple(previews, REPO_ROOT=root, SHIP_DM_DIR=ships,
+                                MODULES_DIR=maps, SHIPS_DIR=root / "hulls", OUTPUT_DIR=output), \
+                    patch.object(previews, "find_dmm_tools", return_value=Path("unused")), \
+                    patch.object(previews, "render", side_effect=render), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                previews.main()
+            manifest = json.loads((output / "manifest.json").read_text())
+            self.assertCountEqual(rendered, names)
+            engineering = manifest["modules"]["bogatyr/workshop/engineering_basic.dmm"]
+            self.assertEqual(engineering["connector"], [1, 1])
+            self.assertEqual(set(engineering["themes"]), {"freshen_up", "nightclub"})
+            surgery = manifest["modules"]["bogatyr/workshop/surgical_suite.dmm"]
+            self.assertNotIn("png", surgery)
+            self.assertEqual(set(surgery["themes"]), {"nightclub", "trashed"})
+            self.assertEqual(len(list(output.glob("*.png"))), 5)
 
 
 def map_with_window(window_path):

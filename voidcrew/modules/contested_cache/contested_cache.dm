@@ -205,11 +205,13 @@
 // everyone leaves, hold overmap position while the event runs, and retire fully
 // once the event is over.
 /obj/structure/overmap/space_ruin/contested_cache/check_and_respawn()
+	if(!mapzone)
+		return
 	if(!release_interior())
 		// Same re-arm as the base proc: a refusal is usually the departing hull still
 		// mid-move, or the worldgen queue timing out - retry rather than holding the
 		// slot until try_cleanup happens to come around.
-		addtimer(CALLBACK(src, PROC_REF(check_and_respawn)), 30 SECONDS, TIMER_UNIQUE)
+		addtimer(CALLBACK(src, PROC_REF(check_start_despawn)), 30 SECONDS, TIMER_UNIQUE)
 		return
 	if(event_over)
 		qdel(src)

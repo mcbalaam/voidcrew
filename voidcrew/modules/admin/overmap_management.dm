@@ -25,7 +25,15 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 	spawn_catalog = null
 	return ..()
 
+/// Player outposts belong to the separate Outpost Manipulator.
+/datum/overmap_management/proc/can_manage_contact(obj/structure/overmap/contact)
+	return !QDELETED(contact) && !istype(contact, /obj/structure/overmap/dynamic/player_outpost)
+
 /datum/overmap_management/proc/select_contact(obj/structure/overmap/contact, obj/structure/overmap/return_to)
+	if(!can_manage_contact(contact))
+		contact = null
+	if(!can_manage_contact(return_to))
+		return_to = null
 	var/obj/structure/overmap/previous = selected_ref?.resolve()
 	if(previous)
 		UnregisterSignal(previous, COMSIG_QDELETING)
@@ -94,7 +102,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		"queued_jobs" = SSovermap.worldgen_queue_length(),
 	)
 	for(var/obj/structure/overmap/contact as anything in GLOB.overmap_objects)
-		if(QDELETED(contact))
+		if(!can_manage_contact(contact))
 			continue
 		data["objects"] += list(list(
 			"ref" = REF(contact),
@@ -105,7 +113,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 			"active" = contact.admin_is_active(),
 		))
 	var/obj/structure/overmap/selected = selected_ref?.resolve()
-	if(selected)
+	if(can_manage_contact(selected))
 		data["selected"] = contact_details(selected)
 	return data
 
@@ -113,6 +121,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 	var/datum/map_footprint/footprint = contact.get_interior_footprint()
 	var/datum/map_zone/zone = contact.admin_mapzone()
 	var/is_ship = istype(contact, /obj/structure/overmap/ship)
+	var/obj/structure/overmap/trader_outpost/trader = astype(contact)
 	var/has_interior = !!(zone || contact.is_loaded())
 	if(is_ship)
 		var/obj/structure/overmap/ship/ship = contact
@@ -129,7 +138,8 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		"footprint" = footprint?.describe(),
 		"is_ship" = is_ship,
 		"has_interior" = has_interior,
-		"supports_interior" = istype(contact, /obj/structure/overmap/planet) || istype(contact, /obj/structure/overmap/space_ruin) || istype(contact, /obj/structure/overmap/event/meteor),
+		"supports_interior" = !!trader || istype(contact, /obj/structure/overmap/planet) || istype(contact, /obj/structure/overmap/space_ruin) || istype(contact, /obj/structure/overmap/event/meteor),
+		"supports_unload" = !trader,
 		"load_blocker" = contact.admin_load_blocker(),
 		"unload_blocker" = contact.admin_unload_blocker(),
 		"delete_blocker" = contact.admin_delete_blocker(),
@@ -137,9 +147,17 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		"can_jump" = !!contact.admin_interior_turf(),
 		"ports" = list(),
 		"ships" = list(),
+		"players" = trader ? list() : null,
 		"cleanup" = contact.admin_cleanup_details(),
 		"unload_effect" = contact.admin_unload_effect(),
 	)
+	if(trader)
+		var/list/locations = trader.admin_player_locations()
+		for(var/mob/living/player as anything in locations)
+			details["players"] += list(list(
+				"ref" = REF(player), "name" = player.real_name, "ckey" = player.ckey || player.mind?.key,
+				"location" = locations[player], "connected" = !!player.client, "dead" = player.stat == DEAD,
+			))
 	var/list/ports = contact.admin_ports()
 	for(var/label in ports)
 		var/obj/docking_port/port = ports[label]
@@ -147,6 +165,13 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 			continue
 		var/obj/docking_port/occupant = port.get_docked()
 		var/port_status = "Available"
+		var/berth_location
+		for(var/datum/outpost_berth/berth as anything in contact.berths)
+			if(!QDELETED(berth) && berth.dock == port)
+				berth_location = "Hangar [berth.berth_number]"
+				if(berth.ship)
+					port_status = "Reserved: [berth.ship.name]"
+				break
 		if(occupant)
 			port_status = "Occupied: [occupant.name]"
 		else if(label == "Landing pad 1" || label == "Landing pad 2")
@@ -160,6 +185,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 			"id" = port.shuttle_id, "coords" = list(port.x, port.y, port.z),
 			"direction" = dir2text(port.dir), "width" = port.width, "height" = port.height,
 			"status" = port_status,
+			"location" = berth_location,
 		))
 	for(var/obj/structure/overmap/ship/ship as anything in contact.get_docking_ships())
 		details["ships"] += list(list("ref" = REF(ship), "name" = ship.admin_name(), "status" = ship.presence_at(contact)))
@@ -180,17 +206,13 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		if(!spawning)
 			INVOKE_ASYNC(src, PROC_REF(spawn_contact), ui.user, params["id"], params["location"], params["ref"])
 		return TRUE
-	if(action == "outposts")
-		var/datum/outpost_manipulator/panel = new(ui.user)
-		panel.ui_interact(ui.user)
-		return TRUE
 	if(action == "select")
 		var/obj/structure/overmap/contact = locate(params["ref"]) in GLOB.overmap_objects
 		select_contact(contact)
 		return TRUE
 	var/obj/structure/overmap/contact = selected_ref?.resolve()
 	// Bind every action to the displayed selection, including across confirmation dialogs.
-	if(!contact || REF(contact) != params["ref"])
+	if(!can_manage_contact(contact) || REF(contact) != params["ref"])
 		error = "That contact is no longer selected or has been deleted."
 		return TRUE
 	switch(action)
@@ -260,6 +282,9 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		add_spawn_option(template.name, "Space ruins", template)
 	for(var/obj/structure/overmap/event/path as anything in subtypesof(/obj/structure/overmap/event))
 		add_spawn_option(initial(path.name), "Hazards", path, initial(path.desc))
+	for(var/obj/structure/overmap/trader_outpost/path as anything in subtypesof(/obj/structure/overmap/trader_outpost))
+		var/datum/outpost_shop/shop = initial(path.shop_type)
+		add_spawn_option(format_text(initial(shop.outpost_name)), "Trader outposts", path, initial(shop.outpost_desc))
 	for(var/datum/map_template/shuttle/voidcrew/path as anything in subtypesof(/datum/map_template/shuttle/voidcrew))
 		if(initial(path.suffix))
 			add_spawn_option(initial(path.name), "Player ships", path)
@@ -347,6 +372,9 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 /obj/structure/overmap/ship/admin_name()
 	return name
 
+/obj/structure/overmap/trader_outpost/admin_name()
+	return format_text(name)
+
 /obj/structure/overmap/space_ruin/admin_name()
 	return true_name || ruin_template?.name || ..()
 
@@ -366,7 +394,9 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		return "Asteroid fields"
 	if(istype(src, /obj/structure/overmap/event))
 		return "Hazards"
-	if(istype(src, /obj/structure/overmap/dynamic/player_outpost) || istype(src, /obj/structure/overmap/trader_outpost))
+	if(istype(src, /obj/structure/overmap/trader_outpost))
+		return "Trader outposts"
+	if(istype(src, /obj/structure/overmap/dynamic/player_outpost))
 		return "Outposts"
 	return "Other"
 
@@ -461,7 +491,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		var/obj/structure/overmap/ship/ship = src
 		return !QDELETED(ship.shuttle)
 	// These contacts have an unloaded state; hazards and permanent contacts do not.
-	return !(istype(src, /obj/structure/overmap/planet) || istype(src, /obj/structure/overmap/space_ruin) || istype(src, /obj/structure/overmap/event/meteor))
+	return !(istype(src, /obj/structure/overmap/planet) || istype(src, /obj/structure/overmap/space_ruin) || istype(src, /obj/structure/overmap/event/meteor) || istype(src, /obj/structure/overmap/trader_outpost))
 
 /obj/structure/overmap/proc/admin_status()
 	if(admin_operation)
@@ -493,10 +523,30 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 	return docked ? "Docked" : capitalize(state)
 
 /obj/structure/overmap/trader_outpost/admin_status()
-	return loading ? "Loading" : (loaded ? "Permanent interior" : "Unloaded")
+	if(admin_operation || loading || concerned)
+		return ..()
+	return loaded ? "Permanent interior" : "Unloaded"
+
+/// Count player bodies, including disconnected and dead ones, in exact reservation bounds.
+/// NPC traders and ghosts do not prevent an otherwise empty outpost being removed.
+/obj/structure/overmap/trader_outpost/proc/admin_player_locations()
+	var/list/locations = list()
+	for(var/mob/living/player as anything in GLOB.mob_living_list)
+		if(QDELETED(player) || !(player.client || player.mind || player.ckey))
+			continue
+		var/turf/location = get_turf(player) // Also finds occupants inside mechs and containers.
+		if(reservation?.contains_turf(location))
+			locations[player] = "Concourse"
+			continue
+		for(var/datum/outpost_berth/berth as anything in berths)
+			if(!QDELETED(berth) && berth.reservation?.contains_turf(location))
+				locations[player] = "Hangar [berth.berth_number]"
+				break
+	return locations
 
 /// Read the timers actually owned by the contact, rather than inferring that a retry exists.
 /obj/structure/overmap/proc/admin_cleanup_timers()
+	// Planet and ruin countdowns share callback names.
 	var/static/list/cleanup_procs = list(
 		TYPE_PROC_REF(/obj/structure/overmap/planet, check_start_despawn) = "Next check",
 		TYPE_PROC_REF(/obj/structure/overmap/planet, attempt_despawn) = "Unload interior",
@@ -572,6 +622,11 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 			return details
 	if(length(timers))
 		var/list/timer = timers[1]
+		// A final eligibility retry can coexist with the countdown it has armed.
+		for(var/list/candidate as anything in timers)
+			if(candidate["label"] == "Unload interior")
+				timer = candidate
+				break
 		details["timer_label"] = timer["label"]
 		details["seconds"] = timer["seconds"]
 		if(!blocker)
@@ -585,7 +640,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		return "Another operation is in progress. Wait for it to finish."
 	if(admin_mapzone() || is_loaded())
 		return "The interior is already loaded."
-	if(istype(src, /obj/structure/overmap/planet) || istype(src, /obj/structure/overmap/space_ruin) || istype(src, /obj/structure/overmap/event/meteor))
+	if(istype(src, /obj/structure/overmap/planet) || istype(src, /obj/structure/overmap/space_ruin) || istype(src, /obj/structure/overmap/event/meteor) || istype(src, /obj/structure/overmap/trader_outpost))
 		return null
 	return "This contact has no separately loadable interior."
 
@@ -611,6 +666,8 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 		return field.get_interior_release_blocker()
 	if(istype(src, /obj/structure/overmap/ship))
 		return "Ships are removed with Delete; they have no unloaded state."
+	if(istype(src, /obj/structure/overmap/trader_outpost))
+		return "Trader interiors stay loaded until the outpost is deleted."
 	return "This contact has no unloadable interior."
 
 /obj/structure/overmap/proc/admin_delete_blocker()
@@ -619,6 +676,15 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 	var/docking_blocker = get_docking_blocker()
 	if(docking_blocker)
 		return docking_blocker
+	if(istype(src, /obj/structure/overmap/trader_outpost))
+		var/obj/structure/overmap/trader_outpost/trader = src
+		for(var/datum/outpost_berth/berth as anything in berths)
+			if(!QDELETED(berth) && (berth.ship || berth.dock?.get_docked()))
+				return "Hangar [berth.berth_number] is still assigned or occupied. Clear the ship first."
+		var/list/locations = trader.admin_player_locations()
+		for(var/mob/living/player as anything in locations)
+			return "[player.real_name] is still in [locations[player]]. Move all player bodies out first."
+		return null
 	if(istype(src, /obj/structure/overmap/ship))
 		var/obj/structure/overmap/ship/ship = src
 		if(ship.state == OVERMAP_SHIP_DOCKING || ship.state == OVERMAP_SHIP_UNDOCKING || ship.shuttle?.move_in_flight())
@@ -638,7 +704,7 @@ ADMIN_VERB(overmap_management, R_ADMIN, "Overmap Management", "Manage overmap co
 	if(istype(src, /obj/structure/overmap/planet) || istype(src, /obj/structure/overmap/space_ruin) || istype(src, /obj/structure/overmap/event))
 		return null
 	if(istype(src, /obj/structure/overmap/dynamic/player_outpost))
-		return "Use Manage outposts to remove a player outpost."
+		return "Use Outpost Manipulator to remove a player outpost."
 	return "This is a permanent location; deletion is unavailable."
 
 /// Runs on the contact, so closing the panel cannot interrupt a map teardown.

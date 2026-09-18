@@ -261,10 +261,13 @@ class Dmm:
 def collect_base_module_files() -> list[str]:
     """map_file values registered in the ship upgrade module datums."""
     files: list[str] = []
-    for dm_file in sorted(SHIP_DM_DIR.glob("*.dm")):
-        for match in re.finditer(r'map_file = "([^"]+)"', dm_file.read_text(encoding="utf-8")):
-            if match.group(1) not in files:
-                files.append(match.group(1))
+    # Rooms added to an existing ship by Voidworks are registered in workshop/.
+    # Scan both registration trees; loose DMMs are not necessarily active modules.
+    for directory in (SHIP_DM_DIR, SHIP_DM_DIR.parent / "workshop"):
+        for dm_file in sorted(directory.rglob("*.dm")):
+            for match in re.finditer(r'map_file = "([^"]+)"', dm_file.read_text(encoding="utf-8")):
+                if match.group(1) not in files:
+                    files.append(match.group(1))
     return files
 
 

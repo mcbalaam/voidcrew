@@ -596,8 +596,8 @@
 				else if(dock_index == 2)
 					ruin_place.second_dock_taken = FALSE
 				dock_index = 0
-				// Check if we should unload and respawn (small delay to ensure ship is fully moved)
-				addtimer(CALLBACK(ruin_place, TYPE_PROC_REF(/obj/structure/overmap/space_ruin, check_and_respawn)), 0.5 SECONDS)
+				// Start the cleanup grace after the departing ship has moved clear.
+				addtimer(CALLBACK(ruin_place, TYPE_PROC_REF(/obj/structure/overmap/space_ruin, check_start_despawn)), 3 SECONDS)
 
 			// Handle landable asteroid field (meteor storm) dock flags and cleanup - unlike
 			// space ruins, the event itself never respawns/relocates, only its reservation frees up

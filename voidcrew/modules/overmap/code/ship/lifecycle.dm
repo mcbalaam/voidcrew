@@ -186,7 +186,7 @@
 		release_berth_flags(site)
 		site.on_ship_undock_complete(src) // frees hangar berths at outposts; no-op elsewhere
 		if(istype(site, /obj/structure/overmap/space_ruin))
-			addtimer(CALLBACK(site, TYPE_PROC_REF(/obj/structure/overmap/space_ruin, check_and_respawn)), 5 SECONDS)
+			addtimer(CALLBACK(site, TYPE_PROC_REF(/obj/structure/overmap/space_ruin, check_start_despawn)), 5 SECONDS)
 		else if(istype(site, /obj/structure/overmap/event/meteor))
 			addtimer(CALLBACK(site, TYPE_PROC_REF(/obj/structure/overmap/event/meteor, unload_level)), 5 SECONDS)
 		// Planets and empty-space placeholders (crash sites included) registered

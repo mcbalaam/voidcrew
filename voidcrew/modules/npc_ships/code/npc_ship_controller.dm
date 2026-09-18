@@ -497,6 +497,11 @@
 	if(target && !QDELETED(target) && get_combat_state() == NPC_COMBAT_HAILING)
 		target.stop_hail_ringing()
 
+	// Same for the financial-scan loop: scan_wealth only stops it on completion, so
+	// a scan abandoned here left it playing aboard the target with no scan running.
+	if(target && !QDELETED(target) && get_combat_state() == NPC_COMBAT_SCANNING)
+		stop_scan_sound(target)
+
 	// Barter mode is a property of one encounter, not of us - don't carry an empty
 	// wallet finding over onto whoever we target next.
 	clear_blackboard_key(BB_NPC_BROKE_BARTER)

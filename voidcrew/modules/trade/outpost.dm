@@ -20,7 +20,7 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	static_lighting = TRUE
 	requires_power = FALSE
 	default_gravity = STANDARD_GRAVITY
-	area_flags = UNIQUE_AREA | NOTELEPORT
+	area_flags = UNIQUE_AREA | NOTELEPORT | NO_BOH
 	flags_1 = NONE
 	ambience_index = AMBIENCE_AWAY
 	repels_megafauna = TRUE // voidcrew/area/megafauna_ban.dm
@@ -143,57 +143,55 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	turrets.Cut()
 	traders.Cut()
 	trader = null
+	loaded = FALSE
+	QDEL_NULL(reservation)
+	QDEL_NULL(outpost_template)
 	return ..()
 
 /obj/structure/overmap/trader_outpost/examine(mob/user)
 	. = ..()
 	. += span_notice("All vessels welcome. Vouchers and credits honored. Violence is bad for business.")
 
+/obj/structure/overmap/trader_outpost/start_level_load(mob/user, obj/structure/overmap/ship/waiting_ship)
+	INVOKE_ASYNC(src, PROC_REF(load_level))
+
+/obj/structure/overmap/trader_outpost/is_loading()
+	return loading
+
+/obj/structure/overmap/trader_outpost/is_loaded()
+	return loaded
+
 /**
  * Loads the outpost interior into a turf reservation (same approach as space ruins),
  * but permanently, outposts never unload.
  */
 /obj/structure/overmap/trader_outpost/proc/load_level()
-	if(reservation || loading)
-		return
+	if(loaded || loading)
+		return loaded
 	loading = TRUE
-
-	if(!outpost_template)
-		outpost_template = new template_type
-
-	if(!outpost_template.width || !outpost_template.height)
-		log_mapping("TRADER OUTPOST: Template '[outpost_template.name]' has no dimensions, cannot load.")
-		loading = FALSE
-		return
-
-	// Ships dock in per-ship hangar berths (outpost_hangar.dm), so the
-	// reservation only needs to fit the interior itself.
-	reservation = SSmapping.request_turf_block_reservation(outpost_template.width, outpost_template.height, 1)
-	if(!reservation)
-		loading = FALSE
-		return
-
-	var/turf/bottom_left = reservation.bottom_left_turfs[1]
-	template_bottom_left = bottom_left
-
 	var/load_success = FALSE
 	try
-		load_success = outpost_template.load(bottom_left)
+		if(!outpost_template)
+			outpost_template = new template_type
+		if(!outpost_template.width || !outpost_template.height)
+			log_mapping("TRADER OUTPOST: Template '[outpost_template.name]' has no dimensions, cannot load.")
+		else
+			// Ships use separate hangar reservations; this block is only the concourse.
+			reservation = SSmapping.request_turf_block_reservation(outpost_template.width, outpost_template.height, 1)
+			if(reservation)
+				template_bottom_left = reservation.bottom_left_turfs[1]
+				if(outpost_template.load(template_bottom_left))
+					link_interior_machinery()
+					load_success = TRUE
 	catch(var/exception/e)
-		log_mapping("TRADER OUTPOST: Failed to load '[outpost_template.name]': [e]")
-		load_success = FALSE
-
+		log_mapping("TRADER OUTPOST: Failed to load '[name]': [e]")
 	if(!load_success)
-		qdel(reservation)
-		reservation = null
+		QDEL_NULL(reservation)
 		template_bottom_left = null
-		loading = FALSE
-		return
-
-	link_interior_machinery()
-
-	loaded = TRUE
+	loaded = load_success
 	loading = FALSE
+	SEND_SIGNAL(src, COMSIG_VOIDCREW_SITE_LOAD_FINISHED, loaded)
+	return loaded
 
 /**
  * Finds the outpost machinery the template spawned and links it to this outpost.
@@ -302,7 +300,7 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	if(acting.is_interdicted)
 		to_chat(user, span_warning("Cannot dock while interdicted!"))
 		return
-	if(concerned)
+	if(concerned || admin_operation || loading)
 		to_chat(user, span_notice("Too much traffic, try again later!"))
 		return
 	concerned = TRUE
@@ -488,8 +486,10 @@ GLOBAL_LIST_EMPTY(trader_outposts)
 	return FALSE
 
 /**
- * Whether this mob is a valid turret target: marked aggressors AND crew of
- * embargoed ships, an embargo means shot on sight, not just refused service.
+ * Whether the outpost has barred this mob from the sanctuary: marked aggressors
+ * AND crew of embargoed ships, an embargo means shot on sight, not just refused
+ * service. Per-mind, so it holds for a player in any body. The turrets layer
+ * their own on-sight rules (xenos, hostile wildlife) on top in valid_target().
  */
 /obj/structure/overmap/trader_outpost/proc/is_turret_target(mob/living/target)
 	return istype(target) && is_user_barred(target)

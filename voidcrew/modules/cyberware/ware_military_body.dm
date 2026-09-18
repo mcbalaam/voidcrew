@@ -685,6 +685,8 @@
 /obj/item/organ/cyberimp/cyberware/rigger/proc/uplink_covers(obj/machinery/computer/helm/console, mob/user)
 	if(QDELETED(console) || console != uplink_console)
 		return FALSE
+	if(!console.is_crew_member(user))
+		return FALSE
 	if(!owner || user != owner || owner.stat != CONSCIOUS)
 		return FALSE
 	if(organ_flags & ORGAN_FAILING)
@@ -716,6 +718,8 @@
 	if(!console)
 		pilot.balloon_alert(pilot, "no helm answering!")
 		to_chat(pilot, span_warning("Nothing aboard [linked_ship] answers the uplink. The socket borrows a helm console, and there isn't a working one left on the ship."))
+		return FALSE
+	if(!console.check_crew_access(pilot))
 		return FALSE
 	uplink_console = console
 	RegisterSignal(console, COMSIG_QDELETING, PROC_REF(on_console_gone))

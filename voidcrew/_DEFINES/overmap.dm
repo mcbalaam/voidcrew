@@ -4,6 +4,11 @@
 // size of the overmap (OVERMAP_SIZE x OVERMAP_SIZE)
 #define OVERMAP_SIZE 51 // keep this odd to provide a centre tile
 
+/// Cleanup grace after a visited ruin becomes empty.
+#define RUIN_DESPAWN_TIMER 5 MINUTES
+/// Allow time to board an interior loaded only for surveying.
+#define RUIN_UNVISITED_DESPAWN_TIMER 15 MINUTES
+
 // These overmap coords are configured to place it in the top left of the z level
 #define OVERMAP_LEFT_SIDE_COORD 1
 #define OVERMAP_RIGHT_SIDE_COORD (OVERMAP_LEFT_SIDE_COORD + (OVERMAP_SIZE - 1))
