@@ -1,6 +1,7 @@
 //Most other defines used in reactions are located in ..\__DEFINES\reactions.dm
 #define SET_REACTION_RESULTS(amount) air.reaction_results[type] = amount
 
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /proc/init_gas_reactions()
 	var/list/priority_reactions = list()
 
@@ -39,6 +40,7 @@
 
 	return priority_reactions
 
+// VOIDCREW EDIT END
 /datum/gas_reaction
 	/**
 	 * Regarding the requirements list: the minimum or maximum requirements must be non-zero.

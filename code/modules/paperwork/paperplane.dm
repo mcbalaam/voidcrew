@@ -112,5 +112,7 @@
 	hit_human.Paralyze(4 SECONDS)
 	hit_human.emote("scream")
 
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /obj/item/paperplane/throw_at(atom/target, range, speed, mob/thrower, spin=FALSE, diagonals_first = FALSE, datum/callback/callback, force, gentle, quickstart = TRUE, throw_type_path = /datum/thrownthing)
 	return ..(target, range, speed, thrower, FALSE, diagonals_first, callback, force, gentle, quickstart = quickstart)
+// VOIDCREW EDIT END

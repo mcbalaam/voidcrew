@@ -11,7 +11,7 @@ import { type CSSProperties, Fragment, useRef, useState } from 'react';
 import { KeepScale } from 'react-zoom-pan-pinch';
 import { Blink, Box, Button, Icon } from 'tgui-core/components';
 
-import { HelmPlane } from '../../../tgui/interfaces/common/HelmPlane';
+import { HelmPlane } from './HelmPlane';
 import { useBackend } from '../../backend';
 import {
   type AutopilotPrefs,

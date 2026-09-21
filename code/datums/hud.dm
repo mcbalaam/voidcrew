@@ -7,6 +7,7 @@ GLOBAL_LIST_EMPTY(all_huds)
 GLOBAL_LIST_EMPTY(huds_by_category)
 
 //GLOBAL HUD LIST
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 GLOBAL_LIST_INIT(huds, alist(
 	DATA_HUD_SECURITY_BASIC = new /datum/atom_hud/data/human/security/basic(),
 	DATA_HUD_SECURITY_ADVANCED = new /datum/atom_hud/data/human/security/advanced(),
@@ -20,6 +21,8 @@ GLOBAL_LIST_INIT(huds, alist(
 	DATA_HUD_MALF_APC = new /datum/atom_hud/data/malf_apc(),
 ))
 
+// VOIDCREW EDIT END
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 GLOBAL_LIST_INIT(trait_to_hud, alist(
 	TRAIT_SECURITY_HUD = DATA_HUD_SECURITY_ADVANCED,
 	TRAIT_MEDICAL_HUD = DATA_HUD_MEDICAL_ADVANCED,
@@ -27,6 +30,7 @@ GLOBAL_LIST_INIT(trait_to_hud, alist(
 	TRAIT_BOT_PATH_HUD = DATA_HUD_BOT_PATH,
 ))
 
+// VOIDCREW EDIT END
 /datum/atom_hud
 	///associative list of the form: list(z level = list(hud atom)).
 	///tracks what hud atoms for this hud exists in what z level so we can only give users

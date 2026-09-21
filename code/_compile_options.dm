@@ -137,17 +137,24 @@
 
 #ifndef PRELOAD_RSC //set to:
 #define PRELOAD_RSC 1 // 0 to allow using external resources or on-demand behaviour;
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 #endif // 1 to use the default behaviour;
 								// 2 for preloading absolutely everything;
 
 // FORCE_MAP (set from the build command line) needs a directory to look in.
 // Without this, mapping.dm's "#ifdef FORCE_MAP" branch fails to compile.
 #ifndef FORCE_MAP_DIRECTORY
+// VOIDCREW EDIT END
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 #define FORCE_MAP_DIRECTORY "_maps"
+// VOIDCREW EDIT END
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 #endif
 
 #ifdef LOWMEMORYMODE
+// VOIDCREW EDIT END
 #define FORCE_MAP "runtimestation"
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 #endif
 
 //Additional code for the above flags.
@@ -156,6 +163,7 @@
 #endif
 
 #if defined(CIBUILDING) && !defined(OPENDREAM)
+// VOIDCREW EDIT END
 #define UNIT_TESTS
 #endif
 

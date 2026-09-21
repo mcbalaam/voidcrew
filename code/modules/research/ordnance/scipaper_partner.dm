@@ -1,3 +1,4 @@
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/scientific_partner/mining
 	name = "Mining Corps"
 	flufftext = "A local group of miners are looking for ways to improve their mining output. They are interested in smaller scale explosives and plasma research."
@@ -15,6 +16,8 @@
 		TECHWEB_NODE_BORG_ENGI = TECHWEB_TIER_3_POINTS,
 	)
 
+// VOIDCREW EDIT END
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/scientific_partner/baron
 	name = "Ghost Writing"
 	flufftext = "A nearby research station ran by a very wealthy captain seems to be struggling with their scientific output. They might reward us handsomely if we ghostwrite for them."
@@ -26,6 +29,7 @@
 		TECHWEB_NODE_PROGRAMMED_SERVER = TECHWEB_TIER_3_POINTS,
 	)
 
+// VOIDCREW EDIT END
 /datum/scientific_partner/defense
 	name = "Defense Partnership"
 	flufftext = "We can work directly for Nanotrasen's \[REDACTED\] division, potentially providing us access with advanced offensive and defensive gadgets."

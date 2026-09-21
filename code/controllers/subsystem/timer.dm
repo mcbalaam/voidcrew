@@ -515,6 +515,7 @@ SUBSYSTEM_DEF(timer)
  * buckets is exceeded by the time at which this timed event is scheduled to be invoked.
  * If the timed event is tracking client time, it will be added to a special bucket.
  */
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/timedevent/proc/bucketJoin()
 #if defined(TIMER_DEBUG)
 	// Generate debug-friendly list for timer, more complex but also more expensive
@@ -591,6 +592,7 @@ SUBSYSTEM_DEF(timer)
 /**
  * Returns a string of the type of the callback for this timer
  */
+// VOIDCREW EDIT END
 /datum/timedevent/proc/getcallingtype()
 	. = "ERROR"
 	if (callBack.object == GLOBAL_PROC)

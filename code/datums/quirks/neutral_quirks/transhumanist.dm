@@ -47,6 +47,7 @@
 		COMSIG_CARBON_LOSE_ORGAN,
 	))
 
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/quirk/transhumanist/proc/get_bodypart_score(mob/living/carbon/target, limbs_only = FALSE)
 	var/organic_bodytypes = 0
 	var/silicon_bodytypes = 0
@@ -74,6 +75,7 @@
 	)
 
 
+// VOIDCREW EDIT END
 /datum/quirk/transhumanist/proc/calculate_bodypart_score()
 	SIGNAL_HANDLER
 	var/list/score = get_bodypart_score(quirk_holder)

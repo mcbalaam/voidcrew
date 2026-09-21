@@ -244,6 +244,7 @@
 	///drops a pie cannon on post_equip. i'm so done with this stupid outfit trying to put shit that doesn't fit in the backpack!
 	var/drop_a_pie_cannon = FALSE
 
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/outfit/consumed_clown/pre_equip(mob/living/carbon/human/clown, visuals_only = FALSE)
 	if(!visuals_only)
 		clown.fully_replace_character_name(clown.name, pick(GLOB.clown_names))
@@ -270,6 +271,7 @@
 	if(prob(10))
 		r_pocket = /obj/item/implanter/sad_trombone
 
+// VOIDCREW EDIT END
 /datum/outfit/consumed_clown/post_equip(mob/living/carbon/human/clown, visuals_only)
 	. = ..()
 	if(drop_a_pie_cannon)

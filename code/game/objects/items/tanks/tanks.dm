@@ -406,9 +406,11 @@
 	if(air_contents.return_pressure() > TANK_FRAGMENT_PRESSURE)
 		explosion_info += TANK_MERGE_OVERPRESSURE
 
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /obj/item/tank/proc/explosion_information()
 	return alist(TANK_RESULTS_REACTION = reaction_info, TANK_RESULTS_MISC = explosion_info)
 
+// VOIDCREW EDIT END
 /obj/item/tank/on_found(mob/finder) //for mousetraps
 	. = ..()
 	if(tank_assembly)

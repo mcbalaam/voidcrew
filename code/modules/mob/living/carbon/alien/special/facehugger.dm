@@ -103,6 +103,7 @@
 	if(CanHug(AM) && Adjacent(AM))
 		return Leap(AM)
 
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /obj/item/clothing/mask/facehugger/throw_at(atom/target, range, speed, mob/thrower, spin=1, diagonals_first = 0, datum/callback/callback, gentle, quickstart = TRUE, throw_type_path = /datum/thrownthing, force)
 	. = ..()
 	if(!.)
@@ -111,6 +112,7 @@
 		icon_state = "[base_icon_state]_thrown"
 		addtimer(CALLBACK(src, PROC_REF(clear_throw_icon_state)), 1.5 SECONDS)
 
+// VOIDCREW EDIT END
 /obj/item/clothing/mask/facehugger/proc/clear_throw_icon_state()
 	if(icon_state == "[base_icon_state]_thrown")
 		icon_state = "[base_icon_state]"

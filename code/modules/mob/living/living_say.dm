@@ -97,6 +97,7 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 
 	return new_msg
 
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /mob/living/say(
 	message,
 	bubble_type,
@@ -277,6 +278,7 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 	return TRUE
 
 
+// VOIDCREW EDIT END
 /mob/living/Hear(message, atom/movable/speaker, datum/language/message_language, raw_message, radio_freq, radio_freq_name, radio_freq_color, list/spans, list/message_mods = list(), message_range=0)
 	if((SEND_SIGNAL(src, COMSIG_MOVABLE_PRE_HEAR, args) & COMSIG_MOVABLE_CANCEL_HEARING) || !GET_CLIENT(src))
 		return FALSE

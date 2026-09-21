@@ -97,6 +97,7 @@
  * Handled automatically, calling this proc externally shouldn't be necessary.
  * Also doubles as an initialization for the gains list.
  */
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/scientific_paper/proc/set_amount()
 	gains = alist(SCIPAPER_COOPERATION_INDEX = 0, SCIPAPER_FUNDING_INDEX = 0)
 	if(!tier || !experiment_path || !tracked_variable)
@@ -112,6 +113,7 @@
 /** Fully check if our paper have all the required variables, and prevent duplicate papers being published in the same tier.
  * Things to check: tier, gain, and partner here. ex_path and record datums in subtypes.
  */
+// VOIDCREW EDIT END
 /datum/scientific_paper/proc/allowed_to_publish(datum/techweb/techweb_to_check)
 	if(!tier || !gains || !partner_path || (0 in gains))
 		return FALSE
@@ -277,6 +279,7 @@
 	return new_paper
 
 /// Various informations on companies/scientific programs/journals etc that the players can sign on to.
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/scientific_partner
 	/// Name of the partner, shown in the Science program's UI.
 	var/name
@@ -289,6 +292,7 @@
 	/// Associative list of which technology the partner might be able to boost and by how much.
 	var/list/boostable_nodes = list()
 
+// VOIDCREW EDIT END
 /datum/scientific_partner/proc/purchase_boost(datum/techweb/purchasing_techweb, datum/techweb_node/node)
 	if(!allowed_to_boost(purchasing_techweb, node.id))
 		return FALSE

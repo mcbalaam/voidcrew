@@ -14,7 +14,7 @@ import {
 import { resolveAsset } from '../assets';
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
-import { HelmPlane } from './common/HelmPlane';
+import { HelmPlane } from '../../voidcrew_tgui/interfaces/Helm/HelmPlane';
 
 type PartsInventory = {
   combat: number;

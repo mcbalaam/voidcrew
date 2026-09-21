@@ -1,3 +1,4 @@
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 PROCESSING_SUBSYSTEM_DEF(station)
 	name = "Station"
 	flags = SS_BACKGROUND
@@ -18,6 +19,7 @@ PROCESSING_SUBSYSTEM_DEF(station)
 	/// Assosciative list of station goal type -> goal instance
 	var/list/datum/station_goal/goals_by_type = list()
 
+// VOIDCREW EDIT END
 /datum/controller/subsystem/processing/station/Initialize()
 	//If doing unit tests we don't do none of that trait shit ya know?
 	// Autowiki also wants consistent outputs, for example making sure the vending machine page always reports the normal products

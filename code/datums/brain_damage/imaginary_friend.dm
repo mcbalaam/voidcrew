@@ -221,6 +221,7 @@
 		create_chat_message(speaker, message_language, raw_message, spans)
 	to_chat(src, compose_message(speaker, message_language, raw_message, radio_freq, freq_name, freq_color, spans, message_mods))
 
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /mob/eye/imaginary_friend/send_speech(message, range = IMAGINARY_FRIEND_SPEECH_RANGE, obj/source = src, bubble_type = bubble_icon, list/spans = list(), datum/language/message_language = null, list/message_mods = list(), forced = null)
 	message = get_message_mods(message, message_mods)
 	message = capitalize(message)
@@ -295,6 +296,7 @@
 		var/link = FOLLOW_LINK(dead_player, owner)
 		to_chat(dead_player, "[link] [dead_rendered]")
 
+// VOIDCREW EDIT END
 /mob/eye/imaginary_friend/proc/clear_saypopup(image/say_popup)
 	LAZYREMOVE(update_on_z, say_popup)
 

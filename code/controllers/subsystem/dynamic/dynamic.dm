@@ -253,6 +253,7 @@ SUBSYSTEM_DEF(dynamic)
 	return rulesets
 
 /// Picks as many roundstart rulesets as we are allowed to spawn, returns them
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/controller/subsystem/dynamic/proc/pick_roundstart_rulesets(list/antag_candidates)
 	PROTECTED_PROC(TRUE)
 
@@ -301,6 +302,7 @@ SUBSYSTEM_DEF(dynamic)
 	QDEL_LIST(rulesets_weighted)
 	return picked_rulesets
 
+// VOIDCREW EDIT END
 /datum/controller/subsystem/dynamic/proc/get_advisory_report()
 	var/shown_tier = current_tier.tier
 	if(prob(10))

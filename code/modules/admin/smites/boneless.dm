@@ -2,6 +2,7 @@
 /datum/smite/boneless
 	name = ":B:oneless"
 
+// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/smite/boneless/effect(client/user, mob/living/target)
 	. = ..()
 
@@ -17,3 +18,4 @@
 			WOUND_SEVERITY_CRITICAL = 2,
 		))
 		carbon_target.cause_wound_of_type_and_severity(WOUND_BLUNT, limb, severity)
+// VOIDCREW EDIT END
