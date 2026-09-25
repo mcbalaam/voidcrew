@@ -7198,6 +7198,7 @@
 #include "voidcrew\modules\overmap\code\_overmap.dm"
 #include "voidcrew\modules\overmap\code\dynamic_object_defines.dm"
 #include "voidcrew\modules\overmap\code\events.dm"
+#include "voidcrew\modules\overmap\code\generation.dm"
 #include "voidcrew\modules\overmap\code\planet.dm"
 #include "voidcrew\modules\overmap\code\space_ruin.dm"
 #include "voidcrew\modules\overmap\code\star_chart.dm"

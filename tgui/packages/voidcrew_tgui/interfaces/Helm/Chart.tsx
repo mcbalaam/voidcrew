@@ -432,14 +432,14 @@ export const Chart = () => {
               }}
             >
               {/* Zone bands, drawn as nested discs largest first so each reads
-                  as an annulus. Matches get_zone_band_for_turf(): the outer
-                  ring is the safe green zone, the ring against the sun is red.
-                  Nothing is painted past the outer circle. */}
+                  as an annulus. Matches get_zone_band_for_turf(): the ring
+                  against the sun is the safe green zone, the outer ring at the
+                  map edge is red. Nothing is painted past the outer circle. */}
               <circle
                 cx={toX(centre)}
                 cy={toY(centre)}
                 r={maxRadius * TILE}
-                fill="rgba(89, 184, 113, 0.06)"
+                fill="rgba(207, 74, 56, 0.06)"
               />
               <circle
                 cx={toX(centre)}
@@ -451,7 +451,7 @@ export const Chart = () => {
                 cx={toX(centre)}
                 cy={toY(centre)}
                 r={maxRadius * (chart?.ringInner ?? 0.33) * TILE}
-                fill="rgba(207, 74, 56, 0.06)"
+                fill="rgba(89, 184, 113, 0.06)"
               />
               {[1, 0.66, 0.33].map((ratio) => (
                 <circle

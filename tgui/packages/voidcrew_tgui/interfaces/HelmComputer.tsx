@@ -1637,9 +1637,9 @@ const bandOf = (
   ringMiddle: number,
 ) => {
   const normalized = Math.hypot(tileX - centre, tileY - centre) / maxRadius;
-  if (normalized < ringInner) return 2;
+  if (normalized < ringInner) return 0;
   if (normalized < ringMiddle) return 1;
-  return 0;
+  return 2;
 };
 
 type DriftTile = { x: number; y: number; step: number };
