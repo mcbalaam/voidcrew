@@ -1,4 +1,3 @@
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/scientific_partner/mining
 	name = "Mining Corps"
 	flufftext = "A local group of miners are looking for ways to improve their mining output. They are interested in smaller scale explosives and plasma research."
@@ -7,7 +6,7 @@
 		/datum/experiment/ordnance/explosive/lowyieldbomb,
 		/datum/experiment/ordnance/explosive/highyieldbomb,
 	)
-	multipliers = alist(SCIPAPER_COOPERATION_INDEX = 0.75, SCIPAPER_FUNDING_INDEX = 0.75)
+	multipliers = list(SCIPAPER_COOPERATION_INDEX = 0.75, SCIPAPER_FUNDING_INDEX = 0.75)
 	boostable_nodes = list(
 		TECHWEB_NODE_LOW_PRESSURE_EXCAVATION = TECHWEB_TIER_2_POINTS,
 		TECHWEB_NODE_PLASMA_MINING = TECHWEB_TIER_3_POINTS,
@@ -16,12 +15,10 @@
 		TECHWEB_NODE_BORG_ENGI = TECHWEB_TIER_3_POINTS,
 	)
 
-// VOIDCREW EDIT END
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/scientific_partner/baron
 	name = "Ghost Writing"
 	flufftext = "A nearby research station ran by a very wealthy captain seems to be struggling with their scientific output. They might reward us handsomely if we ghostwrite for them."
-	multipliers = alist(SCIPAPER_COOPERATION_INDEX = 0.25, SCIPAPER_FUNDING_INDEX = 2)
+	multipliers = list(SCIPAPER_COOPERATION_INDEX = 0.25, SCIPAPER_FUNDING_INDEX = 2)
 	boostable_nodes = list(
 		TECHWEB_NODE_CONSOLES = TECHWEB_TIER_1_POINTS,
 		TECHWEB_NODE_GAMING = TECHWEB_TIER_2_POINTS,
@@ -29,7 +26,6 @@
 		TECHWEB_NODE_PROGRAMMED_SERVER = TECHWEB_TIER_3_POINTS,
 	)
 
-// VOIDCREW EDIT END
 /datum/scientific_partner/defense
 	name = "Defense Partnership"
 	flufftext = "We can work directly for Nanotrasen's \[REDACTED\] division, potentially providing us access with advanced offensive and defensive gadgets."

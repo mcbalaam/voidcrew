@@ -121,8 +121,7 @@ DEFINE_BITFIELD(foodtypes, list(
 #define FOOD_COMPLEXITY_5 5
 
 /// Labels for food quality
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
-GLOBAL_LIST_INIT(food_quality_description, alist(
+GLOBAL_LIST_INIT(food_quality_description, list(
 	FOOD_QUALITY_NORMAL = "okay",
 	FOOD_QUALITY_NICE = "nice",
 	FOOD_QUALITY_GOOD = "good",
@@ -133,9 +132,7 @@ GLOBAL_LIST_INIT(food_quality_description, alist(
 ))
 
 /// Mood events for food quality
-// VOIDCREW EDIT END
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
-GLOBAL_LIST_INIT(food_quality_events, alist(
+GLOBAL_LIST_INIT(food_quality_events, list(
 	FOOD_QUALITY_NORMAL = /datum/mood_event/food,
 	FOOD_QUALITY_NICE = /datum/mood_event/food/nice,
 	FOOD_QUALITY_GOOD = /datum/mood_event/food/good,
@@ -146,9 +143,7 @@ GLOBAL_LIST_INIT(food_quality_events, alist(
 ))
 
 /// Weighted lists of crafted food buffs randomly given according to crafting_complexity unless the food has a specific buff
-// VOIDCREW EDIT END
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
-GLOBAL_LIST_INIT(food_buffs, alist(
+GLOBAL_LIST_INIT(food_buffs, list(
 	FOOD_COMPLEXITY_1 = list(
 		/datum/status_effect/food/haste = 1,
 	),
@@ -167,7 +162,6 @@ GLOBAL_LIST_INIT(food_buffs, alist(
 ))
 
 /// Food quality change according to species diet
-// VOIDCREW EDIT END
 #define DISLIKED_FOOD_QUALITY_CHANGE -2
 #define LIKED_FOOD_QUALITY_CHANGE 2
 /// Threshold for food to give a toxic reaction

@@ -43,14 +43,13 @@
 /datum/dynamic_ruleset/roundstart/traitor/assign_role(datum/mind/candidate)
 	candidate.add_antag_datum(/datum/antagonist/traitor)
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/roundstart/malf_ai
 	name = "Malfunctioning AI"
 	config_tag = "Roundstart Malfunctioning AI"
 	pref_flag = ROLE_MALF
 	preview_antag_datum = /datum/antagonist/malf_ai
 	ruleset_flags = RULESET_HIGH_IMPACT
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -60,7 +59,6 @@
 	max_antag_cap = 1
 	repeatable = FALSE
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/roundstart/malf_ai/get_always_blacklisted_roles()
 	return list()
 
@@ -112,14 +110,13 @@
 /datum/dynamic_ruleset/roundstart/heretic/assign_role(datum/mind/candidate)
 	candidate.add_antag_datum(/datum/antagonist/heretic)
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/roundstart/wizard
 	name = "Wizard"
 	config_tag = "Roundstart Wizard"
 	preview_antag_datum = /datum/antagonist/wizard
 	pref_flag = ROLE_WIZARD
 	ruleset_flags = RULESET_INVADER|RULESET_HIGH_IMPACT
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 0,
 		DYNAMIC_TIER_MEDIUMHIGH = 1,
@@ -130,7 +127,6 @@
 	ruleset_lazy_templates = list(LAZY_TEMPLATE_KEY_WIZARDDEN)
 	repeatable = FALSE
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/roundstart/wizard/prepare_for_role(datum/mind/candidate)
 	LAZYSET(SSjob.forced_occupations, candidate, /datum/job/space_wizard)
 
@@ -145,14 +141,13 @@
 	SSticker.news_report = WIZARD_KILLED
 	return TRUE
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/roundstart/blood_cult
 	name = "Blood Cult"
 	config_tag = "Roundstart Blood Cult"
 	preview_antag_datum = /datum/antagonist/cult
 	pref_flag = ROLE_CULTIST
 	ruleset_flags = RULESET_HIGH_IMPACT
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -167,7 +162,6 @@
 	/// Ratio of cultists getting on the shuttle to be considered a minor win
 	var/ratio_to_be_considered_escaped = 0.5
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/roundstart/blood_cult/get_always_blacklisted_roles()
 	return ..() | JOB_CHAPLAIN
 
@@ -208,14 +202,13 @@
 	SSticker.news_report = (escaped_cultists / num_cultists) >= ratio_to_be_considered_escaped ? CULT_ESCAPE : CULT_FAILURE
 	return TRUE
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/roundstart/nukies
 	name = "Nuclear Operatives"
 	config_tag = "Roundstart Nukeops"
 	preview_antag_datum = /datum/antagonist/nukeop
 	pref_flag = ROLE_OPERATIVE
 	ruleset_flags = RULESET_INVADER|RULESET_HIGH_IMPACT
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -226,7 +219,6 @@
 	ruleset_lazy_templates = list(LAZY_TEMPLATE_KEY_NUKIEBASE)
 	repeatable = FALSE
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/roundstart/nukies/prepare_for_role(datum/mind/candidate)
 	LAZYSET(SSjob.forced_occupations, candidate, /datum/job/nuclear_operative)
 
@@ -294,14 +286,13 @@
 	else
 		candidate.add_antag_datum(/datum/antagonist/nukeop/clownop)
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/roundstart/revolution
 	name = "Revolution"
 	config_tag = "Roundstart Revolution"
 	preview_antag_datum = /datum/antagonist/rev/head
 	pref_flag = ROLE_REV_HEAD
 	ruleset_flags = RULESET_HIGH_IMPACT
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -314,7 +305,6 @@
 	/// If we have fewer heads of staff than this 7 minutes into the round, we'll cancel the revolution
 	var/heads_necessary = 2
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/roundstart/revolution/get_always_blacklisted_roles()
 	. = ..()
 	for(var/datum/job/job as anything in SSjob.all_occupations)
@@ -372,13 +362,12 @@
 	log_dynamic("[config_tag]: All headrevs were ineligible after the timer expired, and no replacements could be found. Ruleset canceled.")
 	message_admins("[config_tag]: All headrevs were ineligible after the timer expired, and no replacements could be found. Ruleset canceled.")
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/roundstart/spies
 	name = "Spies"
 	config_tag = "Roundstart Spies"
 	preview_antag_datum = /datum/antagonist/spy
 	pref_flag = ROLE_SPY
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -387,7 +376,6 @@
 	min_pop = 10
 	min_antag_cap = list("denominator" = 20, "offset" = 1)
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/roundstart/spies/assign_role(datum/mind/candidate)
 	candidate.add_antag_datum(/datum/antagonist/spy)
 

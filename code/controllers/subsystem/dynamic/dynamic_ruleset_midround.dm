@@ -20,14 +20,13 @@
 /datum/dynamic_ruleset/midround/proc/false_alarm()
 	return
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/spiders
 	name = "Spiders"
 	config_tag = "Spiders"
 	midround_type = HEAVY_MIDROUND
 	false_alarm_able = TRUE
 	ruleset_flags = RULESET_INVADER
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 0,
 		DYNAMIC_TIER_MEDIUMHIGH = 1,
@@ -38,7 +37,6 @@
 	/// Determines how many eggs to create - can take a formula like antag_cap
 	var/egg_count = 2
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/spiders/can_be_selected()
 	return ..() && (GLOB.ghost_role_flags & GHOSTROLE_MIDROUND_EVENT) && !isnull(find_maintenance_spawn(atmos_sensitive = TRUE, require_darkness = TRUE))
 
@@ -264,7 +262,6 @@
 		role_name_text = readable_poll_role,
 	)
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/from_ghosts/wizard
 	name = "Wizard"
 	config_tag = "Midround Wizard"
@@ -274,7 +271,7 @@
 	pref_flag = ROLE_WIZARD_MIDROUND
 	jobban_flag = ROLE_WIZARD
 	ruleset_flags = RULESET_INVADER|RULESET_HIGH_IMPACT
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 0,
 		DYNAMIC_TIER_MEDIUMHIGH = 1,
@@ -285,11 +282,9 @@
 	ruleset_lazy_templates = list(LAZY_TEMPLATE_KEY_WIZARDDEN)
 	signup_atom_appearance = /obj/item/clothing/head/wizard
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/from_ghosts/wizard/assign_role(datum/mind/candidate)
 	candidate.add_antag_datum(/datum/antagonist/wizard) // moves to lair for us
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/from_ghosts/nukies
 	name = "Nuclear Operatives"
 	config_tag = "Midround Nukeops"
@@ -299,7 +294,7 @@
 	pref_flag = ROLE_OPERATIVE_MIDROUND
 	jobban_flag = ROLE_OPERATIVE
 	ruleset_flags = RULESET_INVADER|RULESET_HIGH_IMPACT
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -311,7 +306,6 @@
 	ruleset_lazy_templates = list(LAZY_TEMPLATE_KEY_NUKIEBASE)
 	signup_atom_appearance = /obj/machinery/nuclearbomb/syndicate
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/from_ghosts/nukies/create_execute_args()
 	return list(
 		new /datum/team/nuclear(),
@@ -376,7 +370,6 @@
 	else
 		candidate.add_antag_datum(/datum/antagonist/nukeop/clownop, nuke_team) // moves to nuke base for us
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/from_ghosts/blob
 	name = "Blob"
 	config_tag = "Blob"
@@ -385,7 +378,7 @@
 	false_alarm_able = TRUE
 	pref_flag = ROLE_BLOB
 	ruleset_flags = RULESET_INVADER
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -398,7 +391,6 @@
 	/// How many points does the blob spawn with
 	var/starting_points = OVERMIND_STARTING_POINTS
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/from_ghosts/blob/create_ruleset_body()
 	return new /mob/eye/blob(get_blobspawn(), starting_points)
 
@@ -415,7 +407,6 @@
 /datum/dynamic_ruleset/midround/from_ghosts/blob/false_alarm()
 	priority_announce("Confirmed outbreak of level 5 biohazard aboard [station_name()]. All personnel must contain the outbreak.", "Biohazard Alert", ANNOUNCER_OUTBREAK5)
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/from_ghosts/xenomorph
 	name = "Alien Infestation"
 	config_tag = "Xenomorph"
@@ -424,7 +415,7 @@
 	false_alarm_able = TRUE
 	pref_flag = ROLE_ALIEN
 	ruleset_flags = RULESET_INVADER
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 5,
@@ -436,7 +427,6 @@
 	repeatable_weight_decrease = 3
 	signup_atom_appearance = /mob/living/basic/alien
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/from_ghosts/xenomorph/New(list/dynamic_config)
 	. = ..()
 	max_antag_cap += prob(50) // 50% chance to get a second xeno, free!
@@ -504,7 +494,6 @@
 	candidate.current.forceMove(find_maintenance_spawn(atmos_sensitive = TRUE, require_darkness = TRUE))
 	playsound(candidate.current, 'sound/effects/magic/ethereal_exit.ogg', 50, TRUE, -1)
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/from_ghosts/space_dragon
 	name = "Space Dragon"
 	config_tag = "Space Dragon"
@@ -513,7 +502,7 @@
 	false_alarm_able = TRUE
 	pref_flag = ROLE_SPACE_DRAGON
 	ruleset_flags = RULESET_INVADER
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 3,
 		DYNAMIC_TIER_MEDIUMHIGH = 5,
@@ -524,7 +513,6 @@
 	repeatable_weight_decrease = 3
 	signup_atom_appearance = /mob/living/basic/space_dragon
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/from_ghosts/space_dragon/can_be_selected()
 	return ..() && !isnull(find_space_spawn())
 
@@ -577,7 +565,6 @@
 	else
 		candidate.add_antag_datum(/datum/antagonist/abductor/agent, team) // sets species and moves to spawn point
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/from_ghosts/space_ninja
 	name = "Space Ninja"
 	config_tag = "Space Ninja"
@@ -585,7 +572,7 @@
 	midround_type = HEAVY_MIDROUND
 	pref_flag = ROLE_NINJA
 	ruleset_flags = RULESET_INVADER
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 0,
 		DYNAMIC_TIER_MEDIUMHIGH = 1,
@@ -597,7 +584,6 @@
 	ruleset_lazy_templates = list(LAZY_TEMPLATE_KEY_NINJA_HOLDING_FACILITY)
 	signup_atom_appearance = /obj/item/energy_katana
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/from_ghosts/space_ninja/can_be_selected()
 	return ..() && !isnull(find_space_spawn())
 
@@ -1083,7 +1069,6 @@
 		"[command_name()] High-Priority Update",
 	)
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/from_living/malf_ai
 	name = "Malfunctioning AI"
 	config_tag = "Midround Malfunctioning AI"
@@ -1092,7 +1077,7 @@
 	pref_flag = ROLE_MALF_MIDROUND
 	jobban_flag = ROLE_MALF
 	ruleset_flags = RULESET_HIGH_IMPACT
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -1101,7 +1086,6 @@
 	min_pop = 30
 	repeatable = FALSE
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/from_living/malf_ai/get_always_blacklisted_roles()
 	return list()
 
@@ -1114,7 +1098,6 @@
 /datum/dynamic_ruleset/midround/from_living/malf_ai/can_be_selected()
 	return ..() && !HAS_TRAIT(SSstation, STATION_TRAIT_HUMAN_AI)
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/from_living/blob
 	name = "Blob Infection"
 	config_tag = "Blob Infection"
@@ -1122,7 +1105,7 @@
 	midround_type = HEAVY_MIDROUND
 	pref_flag = ROLE_BLOB_INFECTION
 	jobban_flag = ROLE_BLOB
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 0,
 		DYNAMIC_TIER_LOWMEDIUM = 1,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -1131,7 +1114,6 @@
 	min_pop = 30
 	repeatable_weight_decrease = 3
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/from_living/blob/assign_role(datum/mind/candidate)
 	candidate.add_antag_datum(/datum/antagonist/blob/infection)
 	notify_ghosts(
@@ -1140,7 +1122,6 @@
 		header = "So Bulbous...",
 	)
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /datum/dynamic_ruleset/midround/from_living/obsesed
 	name = "Obsession"
 	config_tag = "Midround Obsessed"
@@ -1148,7 +1129,7 @@
 	midround_type = LIGHT_MIDROUND
 	pref_flag = ROLE_OBSESSED
 	blacklisted_roles = list()
-	weight = alist(
+	weight = list(
 		DYNAMIC_TIER_LOW = 5,
 		DYNAMIC_TIER_LOWMEDIUM = 5,
 		DYNAMIC_TIER_MEDIUMHIGH = 3,
@@ -1156,7 +1137,6 @@
 	)
 	min_pop = 5
 
-// VOIDCREW EDIT END
 /datum/dynamic_ruleset/midround/from_living/obsesed/is_valid_candidate(mob/candidate, client/candidate_client)
 	return ..() && !!candidate.get_organ_by_type(/obj/item/organ/brain)
 

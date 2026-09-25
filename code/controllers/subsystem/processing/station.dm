@@ -1,4 +1,3 @@
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 PROCESSING_SUBSYSTEM_DEF(station)
 	name = "Station"
 	flags = SS_BACKGROUND
@@ -8,7 +7,7 @@ PROCESSING_SUBSYSTEM_DEF(station)
 	///A list of currently active station traits
 	var/list/station_traits = list()
 	///Assoc list of trait type || assoc list of traits with weighted value. Used for picking traits from a specific category.
-	var/list/selectable_traits_by_types = alist(STATION_TRAIT_POSITIVE = list(), STATION_TRAIT_NEUTRAL = list(), STATION_TRAIT_NEGATIVE = list())
+	var/list/selectable_traits_by_types = list(STATION_TRAIT_POSITIVE = list(), STATION_TRAIT_NEUTRAL = list(), STATION_TRAIT_NEGATIVE = list())
 	///Currently active announcer. Starts as a type but gets initialized after traits are selected
 	var/datum/centcom_announcer/announcer = /datum/centcom_announcer/default
 	///A list of trait roles that should be protected from antag
@@ -19,7 +18,6 @@ PROCESSING_SUBSYSTEM_DEF(station)
 	/// Assosciative list of station goal type -> goal instance
 	var/list/datum/station_goal/goals_by_type = list()
 
-// VOIDCREW EDIT END
 /datum/controller/subsystem/processing/station/Initialize()
 	//If doing unit tests we don't do none of that trait shit ya know?
 	// Autowiki also wants consistent outputs, for example making sure the vending machine page always reports the normal products
