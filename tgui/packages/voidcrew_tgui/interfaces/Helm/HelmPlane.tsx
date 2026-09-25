@@ -50,6 +50,17 @@ const UNSET_CAMERA: HelmPlaneCamera = {
 /** Camera is written at most once a second, to keep localStorage quiet. */
 const CAMERA_WRITE_MS = 1000;
 
+/**
+ * One axis of a camera position kept on the content, the way `limitToBounds`
+ * clamps a drag: content wider than the viewport stays against its edges, and
+ * narrower content is centred. Programmatic moves skip that clamp, so without
+ * this the first drag after one snaps the view.
+ */
+const boundAxis = (position: number, viewport: number, content: number) =>
+  content <= viewport
+    ? (viewport - content) / 2
+    : Math.min(0, Math.max(viewport - content, position));
+
 type MinimapConfig = {
   width?: number;
   height?: number;
@@ -68,7 +79,7 @@ type HelmPlaneProps = {
   stageBackground?: ReactNode;
   /** Nodes positioned in map-space, see `HelmPlane.Button`. */
   children?: ReactNode;
-  /** Lower zoom bound. Defaults to half the initial fit. */
+  /** Lower zoom bound. Defaults to half the scale that fits the whole map. */
   minScale?: number;
   /** Upper zoom bound. Default 4. */
   maxScale?: number;
@@ -78,6 +89,10 @@ type HelmPlaneProps = {
   fitOnInit?: boolean;
   /** Centre the map on init. Default true. */
   centerOnInit?: boolean;
+  /**
+   * Open centred on this map-space point at `initialScale` (default 1) instead
+   * of fitting or centring the map. Ignored when a saved camera is restored.
+   */
   initialFocus?: { x: number; y: number } | null;
   /** Render the zoom controls. Default true. */
   controls?: boolean;
@@ -209,8 +224,6 @@ function HelmPlaneInner(props: HelmPlaneProps) {
     minimap === true ? {} : minimap || null;
   const [minimapVisible, setMinimapVisible] = useState(!!minimapConfig);
 
-  // The first transform after mount is either the restored camera or the fit;
-  // derive the lower zoom bound (half the fit) from it once.
   const handleTransform = (
     _ref: unknown,
     state: { scale: number; positionX: number; positionY: number },
@@ -221,16 +234,51 @@ function HelmPlaneInner(props: HelmPlaneProps) {
       positionY: state.positionY,
     };
     setTransform(next);
-    if (fitFloor === null && next.scale > 0) {
-      setFitFloor(next.scale / 2);
-    }
     persistCamera(next);
     onTransform?.(next);
   };
 
-  const resolvedMinScale = minScale ?? fitFloor ?? 0.01;
   const contentWidth = mapWidth + padding * 2;
   const contentHeight = mapHeight + padding * 2;
+
+  // The lower zoom bound is half the scale that fits the whole map in the stage.
+  // It comes from the stage and map sizes, not from the first camera, so a plane
+  // that opens zoomed in (a restored camera, an initial focus) can still be
+  // zoomed out to the whole map. Re-measured when the window is resized.
+  const stageRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) {
+      return;
+    }
+    const measure = () => {
+      const { clientWidth, clientHeight } = stage;
+      if (!clientWidth || !clientHeight) {
+        return;
+      }
+      const fit = Math.min(
+        clientWidth / contentWidth,
+        clientHeight / contentHeight,
+      );
+      setFitFloor(fit / 2);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [contentWidth, contentHeight]);
+
+  const resolvedMinScale = minScale ?? fitFloor ?? 0.01;
+  // Decided once at mount: the first transform saves a camera, which would
+  // otherwise flip `hasSaved` before the opening camera has been placed.
+  const [openedFromSave] = useState(hasSaved);
+  // An initial focus owns the opening camera. The library's own fit/centre
+  // layout is re-applied on its first resize notification, which can land after
+  // the focus and throw the view back to the middle of the map.
+  const libraryLayout = !openedFromSave && !initialFocus;
 
   return (
     <TransformWrapper
@@ -239,8 +287,8 @@ function HelmPlaneInner(props: HelmPlaneProps) {
       initialPositionY={hasSaved ? camera.positionY : undefined}
       minScale={resolvedMinScale}
       maxScale={maxScale}
-      fitOnInit={fitOnInit && !hasSaved}
-      centerOnInit={centerOnInit && !hasSaved}
+      fitOnInit={fitOnInit && libraryLayout}
+      centerOnInit={centerOnInit && libraryLayout}
       // Keep the camera on the map: drag and wheel stop at the content edges,
       // and a zoomed-out map is centred instead of drifting off. Without this
       // the plane is infinite and a flick can leave the map far off screen.
@@ -262,12 +310,12 @@ function HelmPlaneInner(props: HelmPlaneProps) {
       <HelmPlaneFocus
         focus={focus}
         duration={focusDuration}
-        initial={initialFocus}
+        initial={openedFromSave ? null : initialFocus}
         initialScale={initialScale}
         padding={padding}
       />
       <div className={classes(['HelmPlane', className])}>
-        <div className="HelmPlane__Stage">
+        <div className="HelmPlane__Stage" ref={stageRef}>
           {stageBackground}
           <TransformComponent
             wrapperStyle={{ width: '100%', height: '100%' }}
@@ -349,29 +397,74 @@ function HelmPlaneFocus(props: {
   // The map's origin sits `padding` into the bounded content box, so map-space
   // points have to be offset by it before they are centred.
   const pad = props.padding ?? 0;
+  // The consumer passes a fresh object every render (the ship moves), and
+  // useControls() hands out new functions every render, so both are read
+  // through refs. The size watcher below is set up once, not per render.
+  const initialRef = useRef(props.initial);
+  initialRef.current = props.initial;
+  const initialScaleRef = useRef(props.initialScale);
+  initialScaleRef.current = props.initialScale;
+  const setTransformRef = useRef(setTransform);
+  setTransformRef.current = setTransform;
+  const hasInitial = !!props.initial;
 
   useEffect(() => {
-    if (initialServed.current || !props.initial) {
-      return;
-    }
     const wrapper = instance.wrapperComponent;
-    if (!wrapper) {
+    if (!hasInitial || !wrapper) {
       return;
     }
-    const rect = wrapper.getBoundingClientRect();
-    if (!rect.width || !rect.height) {
+    let lastWidth = 0;
+    let lastHeight = 0;
+    const onSize = () => {
+      const width = wrapper.clientWidth;
+      const height = wrapper.clientHeight;
+      if (!width || !height) {
+        return;
+      }
+      if (!initialServed.current) {
+        // The window can mount the plane before it has a size; wait for one.
+        const point = initialRef.current;
+        if (!point) {
+          return;
+        }
+        initialServed.current = true;
+        centreOn(
+          instance,
+          setTransformRef.current,
+          pad + point.x,
+          pad + point.y,
+          initialScaleRef.current ?? 1,
+          0,
+        );
+      } else if (
+        lastWidth &&
+        lastHeight &&
+        (width !== lastWidth || height !== lastHeight)
+      ) {
+        // A resized viewport (the window laying itself out, or the player
+        // resizing it) keeps the same point in the middle rather than
+        // sliding the view off towards a corner.
+        const { positionX, positionY, scale } = instance.state;
+        centreOn(
+          instance,
+          setTransformRef.current,
+          (lastWidth / 2 - positionX) / scale,
+          (lastHeight / 2 - positionY) / scale,
+          scale,
+          0,
+        );
+      }
+      lastWidth = width;
+      lastHeight = height;
+    };
+    onSize();
+    if (typeof ResizeObserver === 'undefined') {
       return;
     }
-    initialServed.current = true;
-    const scale = props.initialScale ?? 1;
-    setTransform(
-      rect.width / 2 - (pad + props.initial.x) * scale,
-      rect.height / 2 - (pad + props.initial.y) * scale,
-      scale,
-      0,
-      'easeOut',
-    );
-  }, [props.initial, props.initialScale, pad, instance, setTransform]);
+    const observer = new ResizeObserver(onSize);
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [hasInitial, pad, instance]);
 
   useEffect(() => {
     const request = props.focus;
@@ -379,23 +472,52 @@ function HelmPlaneFocus(props: {
       return;
     }
     served.current = request.nonce;
-    const wrapper = instance.wrapperComponent;
-    if (!wrapper) {
-      return;
-    }
-    const rect = wrapper.getBoundingClientRect();
-    const scale = instance.state.scale;
     // Center the map-space point in the viewport at the current zoom.
-    setTransform(
-      rect.width / 2 - (pad + request.x) * scale,
-      rect.height / 2 - (pad + request.y) * scale,
-      scale,
+    centreOn(
+      instance,
+      setTransform,
+      pad + request.x,
+      pad + request.y,
+      instance.state.scale,
       props.duration ?? 260,
-      'easeOut',
     );
   }, [props.focus, props.duration, pad, instance, setTransform]);
 
   return null;
+}
+
+type PlaneControls = ReturnType<typeof useControls>;
+
+/**
+ * Moves the camera so a content-space point sits in the middle of the viewport
+ * at `scale`, as far as the content's edges allow.
+ */
+function centreOn(
+  instance: PlaneControls['instance'],
+  setTransform: PlaneControls['setTransform'],
+  contentX: number,
+  contentY: number,
+  scale: number,
+  duration: number,
+) {
+  const wrapper = instance.wrapperComponent;
+  const content = instance.contentComponent;
+  if (!wrapper || !content) {
+    return;
+  }
+  const width = wrapper.clientWidth;
+  const height = wrapper.clientHeight;
+  setTransform(
+    boundAxis(width / 2 - contentX * scale, width, content.offsetWidth * scale),
+    boundAxis(
+      height / 2 - contentY * scale,
+      height,
+      content.offsetHeight * scale,
+    ),
+    scale,
+    duration,
+    'easeOut',
+  );
 }
 
 function HelmPlaneControls(props: {
@@ -448,19 +570,13 @@ function HelmPlaneControls(props: {
             if (!wrapper) {
               return;
             }
+            // Zoom about whatever is in the middle of the view now.
             const rect = wrapper.getBoundingClientRect();
-
             const centre = clientToContent(
               rect.left + rect.width / 2,
               rect.top + rect.height / 2,
             );
-            setTransform(
-              rect.width / 2 - centre.x,
-              rect.height / 2 - centre.y,
-              1,
-              200,
-              'easeOut',
-            );
+            centreOn(instance, setTransform, centre.x, centre.y, 1, 200);
           }}
         />
         <Button icon="plus" onClick={() => zoomIn(0.15)} />

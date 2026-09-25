@@ -168,7 +168,7 @@ export const Chart = () => {
   const drift = useDrift(contacts);
   const { selected, select } = useSelection();
   const openMenu = useMenuControl();
-  const { request: focusRequest } = useChartFocus();
+  const { request: focusRequest, focusOn } = useChartFocus();
   const locked = useLocked();
   const travelClock = useTravelClock();
   // Uncontrolled drift extrapolation is misleading while autopilot owns steering.
@@ -180,13 +180,6 @@ export const Chart = () => {
       : null;
 
   const [hovered, setHovered] = useState<string | null>(null);
-  // Recentre is opt-in: the plane must never yank itself back to the ship while
-  // the crew is looking somewhere else, so following is a button, not a mode.
-  const [selfFocus, setSelfFocus] = useState<{
-    x: number;
-    y: number;
-    nonce: number;
-  } | null>(null);
   // Live camera zoom, only so the grid can fade out as the chart widens. Stored
   // quantised and only on scale change, so panning never re-renders the SVG.
   const [cameraScale, setCameraScale] = useState(1);
@@ -212,13 +205,15 @@ export const Chart = () => {
   const lastFacing = useRef(0);
   if (rawCourse) lastFacing.current = rawCourse;
   const shipCourse = rawCourse || lastFacing.current;
+  // One request stream for the register and the recentre button, so whichever
+  // was pressed last is the one the camera follows.
   const focus = focusRequest
     ? {
         x: toX(focusRequest.x),
         y: toY(focusRequest.y),
         nonce: focusRequest.nonce,
       }
-    : selfFocus;
+    : null;
 
   // The base copy is always drawn; wrapped copies are added only while the
   // contact sits near the seam, so a charted contact on the far side isn't lost.
@@ -304,17 +299,29 @@ export const Chart = () => {
     (autopilot?.path?.length ?? 0) > 0
       ? visibleCourseSegments([x, y], autopilot?.path ?? [], [x, y], size)
       : [];
-  const routePoints = routeSegments.length
-    ? [
-        { x: toX(routeSegments[0].from[0]), y: toY(routeSegments[0].from[1]) },
-        ...routeSegments.map((segment) => ({
-          x: toX(segment.to[0]),
-          y: toY(segment.to[1]),
-        })),
-      ]
-    : [];
+  // A barrier crossing leaves a gap between segments. Each unbroken stretch gets
+  // its own chevrons, so none are drawn across the map along the gap.
+  const routeRuns: { x: number; y: number }[][] = [];
+  let runEnd: readonly [number, number] | null = null;
+  for (const segment of routeSegments) {
+    if (
+      !runEnd ||
+      runEnd[0] !== segment.from[0] ||
+      runEnd[1] !== segment.from[1]
+    ) {
+      routeRuns.push([{ x: toX(segment.from[0]), y: toY(segment.from[1]) }]);
+    }
+    routeRuns[routeRuns.length - 1].push({
+      x: toX(segment.to[0]),
+      y: toY(segment.to[1]),
+    });
+    runEnd = segment.to;
+  }
   const driftArrows = chevronMarks(driftPoints, TILE, TILE * 0.16);
-  const routeArrows = chevronMarks(routePoints, TILE, TILE * 0.16);
+  const routeArrows = routeRuns
+    .map((run) => chevronMarks(run, TILE, TILE * 0.16))
+    .filter(Boolean)
+    .join(' ');
 
   // Autopilot readout and the ship-recentre button share the plane's control
   // strip along the bottom of the chart, next to the map's own zoom controls.
@@ -380,13 +387,7 @@ export const Chart = () => {
     <Button
       icon="crosshairs"
       tooltip="Recentre on the ship"
-      onClick={() =>
-        setSelfFocus({
-          x: toX(x),
-          y: toY(y),
-          nonce: (selfFocus?.nonce ?? 0) + 1,
-        })
-      }
+      onClick={() => focusOn(x, y)}
     />
   );
 
