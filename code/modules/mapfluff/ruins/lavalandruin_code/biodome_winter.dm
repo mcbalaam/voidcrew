@@ -18,15 +18,13 @@
 	. = ..()
 	. += span_notice("Throw this at objects or creatures to freeze them, it will boomerang back so be cautious!")
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
-/obj/item/freeze_cube/throw_at(atom/target, range, speed, mob/thrower, spin=1, diagonals_first = 0, datum/callback/callback, force, gentle, quickstart = TRUE, throw_type_path = /datum/thrownthing)
+/obj/item/freeze_cube/throw_at(atom/target, range, speed, mob/thrower, spin=1, diagonals_first = 0, datum/callback/callback, force, gentle, quickstart = TRUE, throw_type_path = /datum/thrownthing) // VOIDCREW EDIT: added the parent's `force` argument so ..() forwards the rest in order
 	. = ..()
 	if(!.)
 		return
 	icon_state = "freeze_cube_thrown"
 	addtimer(VARSET_CALLBACK(src, icon_state, initial(icon_state)), 1 SECONDS)
 
-// VOIDCREW EDIT END
 /obj/item/freeze_cube/throw_impact(atom/hit_atom, datum/thrownthing/throwingdatum)
 	icon_state = initial(icon_state)
 	var/caught = hit_atom.hitby(src, FALSE, FALSE, throwingdatum=throwingdatum)

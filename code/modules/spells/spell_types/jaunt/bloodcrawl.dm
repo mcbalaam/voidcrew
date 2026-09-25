@@ -189,8 +189,7 @@
 	/// When demon first appears, it does not take damage while in Jaunt. He also doesn't take damage while he's eating someone.
 	var/resist_jaunt_damage = TRUE
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
-/datum/action/cooldown/spell/jaunt/bloodcrawl/slaughter_demon/try_enter_jaunt(obj/effect/decal/cleanable/blood, mob/living/jaunter, forced = FALSE)
+/datum/action/cooldown/spell/jaunt/bloodcrawl/slaughter_demon/try_enter_jaunt(obj/effect/decal/cleanable/blood, mob/living/jaunter, forced = FALSE) // VOIDCREW EDIT: added the parent's `forced` argument
 	// Save this before the actual jaunt
 	var/atom/coming_with = jaunter.pulling
 
@@ -231,7 +230,6 @@
 
 	return TRUE
 
-// VOIDCREW EDIT END
 /datum/action/cooldown/spell/jaunt/bloodcrawl/slaughter_demon/on_jaunt_exited(obj/effect/dummy/phased_mob/jaunt, mob/living/unjaunter)
 	deltimer(jaunt_damage_timer)
 	resist_jaunt_damage = FALSE

@@ -97,7 +97,6 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 
 	return new_msg
 
-// VOIDCREW EDIT START - PR #292: NanoMap integration and compatibility fixes.
 /mob/living/say(
 	message,
 	bubble_type,
@@ -111,11 +110,12 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 	datum/saymode/saymode,
 	list/message_mods = list(),
 )
-	// Speech is fire-and-forget: say() can prompt (custom emote input, soft word
+	// VOIDCREW EDIT ADDITION START - speech is fire-and-forget: say() can prompt (custom emote input, soft word
 	// filter) and can wait on the ban cache, but no caller consumes its return or
 	// needs it to finish before continuing. Non-blocking here keeps callers such
 	// as Life() and signal handlers from inheriting a sleep they cannot afford.
 	set waitfor = FALSE
+	// VOIDCREW EDIT ADDITION END
 	if(sanitize)
 		message = trim(copytext_char(sanitize(message), 1, MAX_MESSAGE_LEN))
 	if(!message || message == "")
@@ -130,7 +130,7 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 	if(!message)
 		return
 
-	// The dispatch is async on purpose: dynamic_invoke_verb() reaches the base
+	// VOIDCREW EDIT START - the dispatch is async on purpose: dynamic_invoke_verb() reaches the base
 	// /datum/admin_verb/proc/__avd_do_verb, whose child verbs may block (input,
 	// alerts, tgui prompts). say() runs from SHOULD_NOT_SLEEP contexts all over
 	// the codebase, so a synchronous call here made the whole graph look
@@ -144,6 +144,7 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 	if(message_mods[RADIO_EXTENSION] == MODE_DEADMIN)
 		INVOKE_ASYNC(SSadmin_verbs, TYPE_PROC_REF(/datum/controller/subsystem/admin_verbs, dynamic_invoke_verb), client, /datum/admin_verb/dsay, message)
 		return
+	// VOIDCREW EDIT END
 
 	// dead is the only state you can never emote
 	if(stat != DEAD && check_emote(original_message, forced))
@@ -278,7 +279,6 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 	return TRUE
 
 
-// VOIDCREW EDIT END
 /mob/living/Hear(message, atom/movable/speaker, datum/language/message_language, raw_message, radio_freq, radio_freq_name, radio_freq_color, list/spans, list/message_mods = list(), message_range=0)
 	if((SEND_SIGNAL(src, COMSIG_MOVABLE_PRE_HEAR, args) & COMSIG_MOVABLE_CANCEL_HEARING) || !GET_CLIENT(src))
 		return FALSE
