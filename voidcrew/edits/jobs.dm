@@ -3,6 +3,10 @@
 	var/officer = FALSE
 	///The job category for ship role preferences (JOB_CAT_COMMAND, JOB_CAT_ENGINEERING, etc.)
 	var/job_category
+	/// Ship roster spawn kind; human outfits remain the default.
+	var/ship_role = "crew"
+	var/ship_borg_model
+	var/datum/weakref/crew_ship_ref
 
 /**
  * Every job a roundstart ship could possibly spawn with.

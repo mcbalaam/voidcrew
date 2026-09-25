@@ -199,6 +199,11 @@ SUBSYSTEM_DEF(overmap)
  * says nothing about them and their own crew-death tracking drives abandonment. Once
  * abandoned, claimed by players, or destroyed they are subject to the same rules as any
  * hull, which is what finally stops every killed pirate leaving a permanent wreck.
+ *
+ * A hull docked at a player outpost is exempt from all three clocks, unconditionally -
+ * it is parked at somebody's home rather than sitting abandoned in the field, and
+ * nothing about it should tick towards a claim window or a despawn. This is the one
+ * site type that pauses the clocks without requiring anyone to actually be present.
  */
 /datum/controller/subsystem/overmap/proc/sweep_derelicts()
 	var/despawned_one = FALSE
@@ -209,6 +214,15 @@ SUBSYSTEM_DEF(overmap)
 		if(QDELETED(ship))
 			continue
 		if(ship.has_active_crew())
+			ship.crewless_since = 0
+			ship.site_dead_since = 0
+			ship.site_dead_undock_refused = FALSE
+			continue
+		// A hull docked at a player outpost is parked at someone's home, not drifting
+		// derelict in the field - none of the three clocks above should run against it
+		// at all, occupied or not. Unlike every other site type, presence doesn't even
+		// enter into it here.
+		if(istype(ship.docked, /obj/structure/overmap/dynamic/player_outpost))
 			ship.crewless_since = 0
 			ship.site_dead_since = 0
 			ship.site_dead_undock_refused = FALSE
@@ -1523,7 +1537,7 @@ SUBSYSTEM_DEF(overmap)
 		mapzone.release_slot(footprint)
 		return null
 	else
-		zlevel = SSmapping.add_new_zlevel(encounter_name, zlevel_traits)
+		zlevel = SSmapping.add_new_zlevel(encounter_name, zlevel_traits, mint_reason = "[tenant_owner ? "'[tenant_owner.name]'" : "an unowned encounter"][ruin_type ? " with ruin '[ruin_type.name]' ([ruin_type.width]x[ruin_type.height])" : ""] claimed [footprint.describe()] of a fresh zone - [describe_zone_occupancy(mapzone)]")
 		mapzone.add_space_level(zlevel)
 
 	// add_space_level() attaches slots claimed before the level existed; this covers the
@@ -1734,6 +1748,36 @@ SUBSYSTEM_DEF(overmap)
 
 /datum/controller/subsystem/overmap/proc/create_map_zone(new_name)
 	return new /datum/map_zone(new_name)
+
+/**
+ * One line describing why the pool could not deal a slot, for the z-mint log: every other
+ * zone, grouped by tenant class, with used/capacity slot counts. "8 other zones: planet 4
+ * (15/16 slots), flat 3 (12/12), solo 1 (1/1)" answers the question a climbing world_maxz
+ * column raises - is the lattice packing badly, or is the load real? - without a census.
+ *
+ * `excluding` is the zone being minted for; it has no level yet and its one claimed slot
+ * would only muddy the count. Walks map_zones once (a dozen entries at most) and only ever
+ * runs on a mint, so cost is not a concern.
+ */
+/datum/controller/subsystem/overmap/proc/describe_zone_occupancy(datum/map_zone/excluding)
+	var/list/used_by_class = list()
+	var/list/capacity_by_class = list()
+	var/list/zones_by_class = list()
+	var/others = 0
+	for(var/datum/map_zone/mapzone as anything in map_zones)
+		if(mapzone == excluding)
+			continue
+		others++
+		var/class_key = mapzone.tenant_class || "free"
+		used_by_class[class_key] += mapzone.used_slot_count()
+		capacity_by_class[class_key] += mapzone.slot_capacity
+		zones_by_class[class_key] += 1
+	if(!others)
+		return "no other zones exist"
+	var/list/parts = list()
+	for(var/class_key in zones_by_class)
+		parts += "[class_key] [zones_by_class[class_key]] ([used_by_class[class_key]]/[capacity_by_class[class_key]] slots)"
+	return "[others] other zone\s: [parts.Join(", ")]"
 
 /**
  * Finds a map zone that can deal a slot of `tenant_class`, as list(zone, slot_index).

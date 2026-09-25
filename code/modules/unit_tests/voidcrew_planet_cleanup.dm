@@ -237,6 +237,71 @@
 	TEST_ASSERT_EQUAL(zone.used_slot_count(), slots_before - 1, "Planet teardown did not release its map slot")
 	TEST_ASSERT(!QDELETED(neighbour) && !QDELETED(neighbour_mob), "Planet teardown cleared the neighbouring encounter")
 
+// VOIDCREW EDIT ADDITION START: duct salvage must not survive encounter teardown.
+/datum/unit_test/voidcrew_planet_cleanup_ducts
+	var/site_type = /obj/structure/overmap/planet
+	var/obj/structure/overmap/planet/site
+	var/list/original_turfs = list()
+
+/datum/unit_test/voidcrew_planet_cleanup_ducts/Destroy()
+	if(!QDELETED(site))
+		if(site.mapzone)
+			site.remove_mapzone(throttled = FALSE)
+	for(var/turf/tile as anything in original_turfs)
+		var/list/original = original_turfs[tile]
+		tile = tile.ChangeTurf(original[1], original[2])
+		tile.change_area(get_area(tile), original[3])
+	return ..()
+
+/datum/unit_test/voidcrew_planet_cleanup_ducts/Run()
+	var/turf/first_turf = get_step(run_loc_floor_bottom_left, NORTHEAST)
+	var/turf/second_turf = get_step(first_turf, EAST)
+	var/turf/neighbour_turf = get_step(second_turf, EAST)
+	for(var/turf/tile as anything in list(first_turf, second_turf))
+		original_turfs[tile] = list(tile.type, islist(tile.baseturfs) ? tile.baseturfs.Copy() : tile.baseturfs, get_area(tile))
+	var/datum/map_zone/zone = allocate(/datum/map_zone)
+	zone.z_levels = list(reservation)
+	var/datum/map_footprint/footprint = zone.claim_slot()
+	var/datum/map_footprint/neighbour = zone.claim_slot()
+	TEST_ASSERT(footprint && neighbour, "Could not claim the cleanup and neighbouring slots")
+	footprint.set_rect(first_turf.x, first_turf.y, 2, 1)
+	neighbour.set_rect(neighbour_turf.x, neighbour_turf.y, 1, 1)
+	site = allocate(site_type)
+	site.mapzone = zone
+	site.footprint = footprint
+	var/obj/machinery/duct/first_duct = allocate(/obj/machinery/duct, first_turf)
+	var/obj/machinery/duct/second_duct = allocate(/obj/machinery/duct, second_turf)
+	var/obj/machinery/duct/neighbour_duct = allocate(/obj/machinery/duct, neighbour_turf)
+	var/obj/item/stack/ducts/neighbour_stack = allocate(/obj/item/stack/ducts, neighbour_turf)
+	var/datum/ductnet/network = first_duct.duct
+	TEST_ASSERT(network && second_duct.duct == network, "The cleanup fixture must contain connected ducts")
+	var/mob/dead/observer/watcher = allocate(/mob/dead/observer, first_turf)
+	watcher.forceMove(first_turf)
+
+	site.remove_mapzone(throttled = FALSE)
+	TEST_ASSERT(QDELETED(first_duct) && QDELETED(second_duct), "Encounter teardown left installed ducts behind")
+	TEST_ASSERT(QDELETED(network), "Encounter teardown retained the old duct network")
+	for(var/turf/tile as anything in original_turfs)
+		TEST_ASSERT_NULL(locate(/obj/item/stack/ducts) in tile, "Encounter teardown left duct salvage on [tile]")
+	TEST_ASSERT(!QDELETED(watcher), "Duct cleanup deleted an observer")
+	TEST_ASSERT(!QDELETED(neighbour_duct) && neighbour_duct.loc == neighbour_turf, "Duct cleanup crossed into the neighbouring encounter")
+	TEST_ASSERT(!QDELETED(neighbour_stack), "Duct cleanup deleted the neighbour's loose ducts")
+	TEST_ASSERT(QDELETED(footprint) && !QDELETED(neighbour), "Duct cleanup did not release only its own slot")
+
+	// Normal dismantling must still return a usable duct with its selected colour and layer.
+	neighbour_duct.duct_color = COLOR_RED
+	neighbour_duct.duct_layer = SECOND_DUCT_LAYER
+	qdel(neighbour_stack)
+	neighbour_duct.set_anchored(FALSE)
+	var/obj/item/stack/ducts/salvage = locate() in neighbour_turf
+	TEST_ASSERT_NOTNULL(salvage, "Normal duct dismantling stopped returning salvage")
+	TEST_ASSERT_EQUAL(salvage.duct_color, GLOB.pipe_color_name[COLOR_RED], "Dismantling lost the duct colour")
+	TEST_ASSERT_EQUAL(salvage.duct_layer, GLOB.plumbing_layer_names["[SECOND_DUCT_LAYER]"], "Dismantling lost the duct layer")
+
+/datum/unit_test/voidcrew_planet_cleanup_ducts/empty
+	site_type = /obj/structure/overmap/planet/empty
+// VOIDCREW EDIT ADDITION END
+
 /// A surface charted from orbit is on a clock too - a longer one, until somebody lands.
 /datum/unit_test/voidcrew_planet_cleanup_unvisited
 	var/obj/structure/overmap/planet/site
@@ -347,3 +412,59 @@
 		TEST_ASSERT(QDELETED(surface_mob) && QDELETED(surface_body), "[area_type]: cleanup stopped clearing ordinary planet mobs and corpses")
 		TEST_ASSERT(!QDELETED(neighbour_mob), "[area_type]: cleanup escaped the planet footprint")
 		TEST_ASSERT(!tracker.populated, "[area_type]: cleanup did not finish depopulating the planet")
+
+/// A player's body inside fauna needs the same protection as a body on the ground.
+/datum/unit_test/voidcrew_planet_mobs_held_players
+	var/mob/living/basic/mining/legion/legion
+	var/mob/living/carbon/human/consistent/consumed
+
+/datum/unit_test/voidcrew_planet_mobs_held_players/Destroy()
+	// Release the corpse before the fixture's Legion loses its AI controller.
+	if(!QDELETED(legion) && !QDELETED(consumed) && consumed.loc == legion)
+		consumed.forceMove(get_turf(legion))
+	legion = null
+	consumed = null
+	return ..()
+
+/datum/unit_test/voidcrew_planet_mobs_held_players/Run()
+	var/turf/surface = run_loc_floor_bottom_left
+	var/datum/map_footprint/footprint = allocate(/datum/map_footprint)
+	footprint.z_value = surface.z
+	footprint.set_rect(surface.x, surface.y, 4, 2)
+	var/datum/planet_mob_tracker/tracker = allocate(/datum/planet_mob_tracker)
+	tracker.surface_z = surface.z
+	tracker.footprint = footprint
+	TEST_ASSERT(!SSplanet_mobs.check_players(tracker), "The cleanup fixture must have no connected players")
+
+	legion = allocate(/mob/living/basic/mining/legion, surface)
+	consumed = allocate(/mob/living/carbon/human/consistent, surface)
+	consumed.mind_initialize()
+	legion.consume(consumed)
+	TEST_ASSERT_EQUAL(consumed.loc, legion, "Legion did not contain the actual player body")
+	TEST_ASSERT_EQUAL(consumed.stat, DEAD, "Legion fixture did not kill its host")
+	TEST_ASSERT_NOTNULL(consumed.mind, "Consumed body lost its player mind before cleanup")
+	TEST_ASSERT_NULL(legion.mind, "The outer Legion must not itself have a player mind")
+
+	// Protection must also work through intermediate containers, not only stored_mob.
+	var/mob/living/basic/carrier = allocate(/mob/living/basic, get_step(surface, EAST))
+	var/obj/item/storage/box/container = allocate(/obj/item/storage/box, carrier)
+	var/mob/living/carbon/human/consistent/nested_body = allocate(/mob/living/carbon/human/consistent, surface)
+	nested_body.mind_initialize()
+	nested_body.death()
+	nested_body.forceMove(container)
+	var/mob/living/basic/ordinary = allocate(/mob/living/basic, get_step(surface, NORTH))
+	var/mob/living/basic/corpse = allocate(/mob/living/basic, get_step(surface, NORTHEAST))
+	corpse.death()
+	var/mob/living/basic/mining/legion/empty_legion = allocate(/mob/living/basic/mining/legion, get_step(get_step(surface, EAST), EAST))
+
+	tracker.populated = TRUE
+	SSplanet_mobs.despawn_planet_mobs(tracker)
+	TEST_ASSERT(!QDELETED(consumed), "Planet cleanup deleted the player's consumed corpse")
+	TEST_ASSERT(!QDELETED(legion) && legion.stored_mob == consumed, "Planet cleanup destroyed a Legion holding a player")
+	TEST_ASSERT(!QDELETED(carrier) && !QDELETED(nested_body), "Planet cleanup deleted a player through an intermediate container")
+	TEST_ASSERT_EQUAL(nested_body.loc, container, "Planet cleanup moved the protected nested body")
+	TEST_ASSERT(QDELETED(ordinary) && QDELETED(corpse) && QDELETED(empty_legion), "Player protection stopped cleanup of ordinary fauna and corpses")
+	TEST_ASSERT_EQUAL(SSplanet_mobs.count_planet_mobs(tracker), 0, "Protected carriers counted against the managed fauna budget")
+	TEST_ASSERT(!tracker.populated, "Protected carriers prevented the planet's cleanup from completing")
+	legion.death()
+	TEST_ASSERT(!QDELETED(consumed) && isturf(consumed.loc), "Defeating the protected Legion did not release its player's corpse")

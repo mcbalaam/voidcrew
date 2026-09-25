@@ -62,15 +62,35 @@
 	var/mob/living/basic/bear/possessed = allocate(/mob/living/basic/bear)
 	possessed.mind_initialize()
 	TEST_ASSERT(!turret.valid_target(possessed), "the turret shot a player-driven bear that had done nothing")
-	outpost.aggressor_minds[possessed.mind] = TRUE
+	outpost.aggressor_minds[possessed.mind] = world.time + 1 MINUTES
 	TEST_ASSERT(turret.valid_target(possessed), "the turret ignored a marked aggressor because they were riding a bear")
 
 	// The strike ladder still works for people.
 	var/mob/living/carbon/human/aggressor = allocate(/mob/living/carbon/human/consistent)
 	aggressor.mind_initialize()
 	TEST_ASSERT(!turret.valid_target(aggressor), "the turret shot a shopper with a clean record")
-	outpost.aggressor_minds[aggressor.mind] = TRUE
+	outpost.aggressor_minds[aggressor.mind] = world.time + 1 MINUTES
 	TEST_ASSERT(turret.valid_target(aggressor), "the turret held fire on a marked aggressor")
+
+	// The mark lapses, and takes the strike ladder with it.
+	outpost.aggressor_minds[aggressor.mind] = world.time
+	outpost.aggressor_strikes[aggressor.mind] = 3
+	TEST_ASSERT(!turret.valid_target(aggressor), "the turret kept shooting an aggressor whose mark had lapsed")
+	TEST_ASSERT_NULL(outpost.aggressor_minds[aggressor.mind], "a lapsed mark was not pruned")
+	TEST_ASSERT_NULL(outpost.aggressor_strikes[aggressor.mind], "a lapsed mark did not reset the strike ladder")
+
+	// Unspent warnings go stale on the same clock. Fork defines are included after
+	// unit tests: OUTPOST_AGGRESSION_MARK_DURATION = OUTPOST_EMBARGO_DURATION = 15 minutes.
+	outpost.register_aggression(aggressor)
+	outpost.register_aggression(aggressor) // same tick, so the same-swing grace folds it in
+	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[aggressor.mind], 1, "a fresh infraction did not earn exactly one strike")
+	outpost.aggressor_strike_times[aggressor.mind] = world.time - 0.8 SECONDS // one melee cooldown later
+	outpost.register_aggression(aggressor)
+	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[aggressor.mind], 2, "a second swing after the melee cooldown was folded into the first")
+	outpost.aggressor_strike_times[aggressor.mind] = world.time - 15 MINUTES
+	outpost.register_aggression(aggressor)
+	TEST_ASSERT_EQUAL(outpost.aggressor_strikes[aggressor.mind], 1, "a warning from 15 minutes ago still counted toward the ladder")
+	TEST_ASSERT(!turret.valid_target(aggressor), "the turret shot someone with a single fresh warning")
 
 	// Corpses are not targets, whatever they were.
 	var/mob/living/basic/carp/dead_carp = allocate(/mob/living/basic/carp)

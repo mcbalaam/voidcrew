@@ -231,6 +231,7 @@
 #include "monkey_business.dm"
 #include "mouse_bite_cable.dm"
 #include "movement_order_sanity.dm"
+#include "../../../voidcrew/modules/unit_tests/drift_vectors.dm" // VOIDCREW EDIT ADDITION
 #include "mutant_hands_consistency.dm"
 #include "mutant_organs.dm"
 #include "novaflower_burn.dm"
@@ -280,6 +281,7 @@
 #include "security_officer_distribution.dm"
 #include "serving_tray.dm"
 #include "shuttle_cling_lifecycle.dm"
+#include "../../../voidcrew/modules/unit_tests/shuttle_cling_rethrow.dm" // VOIDCREW EDIT ADDITION
 #include "shuttle_load_ownership.dm"
 #include "simple_animal_freeze.dm"
 #include "siunit.dm"
@@ -317,6 +319,7 @@
 #include "tail_wag.dm"
 #include "teleporters.dm"
 #include "throw_cleanup.dm"
+#include "../../../voidcrew/modules/unit_tests/throw_rethrow.dm" // VOIDCREW EDIT ADDITION
 #include "text.dm"
 #include "tgui_create_message.dm"
 #include "timer_sanity.dm"
@@ -338,7 +341,9 @@
 #include "voidcrew_blueprint_guns.dm"
 #include "voidcrew_colosseum.dm"
 #include "voidcrew_construction_refunds.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_combat_camera_breaches.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_construction_automation.dm"
+#include "voidcrew_pandora_links.dm"
 #include "voidcrew_repair_robotics.dm"
 #include "voidcrew_cordon_teleport.dm"
 #include "voidcrew_crew_antag_gc.dm"
@@ -352,14 +357,17 @@
 #include "voidcrew_helpers.dm"
 #include "voidcrew_hull_containment.dm"
 #include "voidcrew_hull_survey.dm"
+#include "voidcrew_windoor_survey.dm"
 #include "voidcrew_lich.dm"
 #include "voidcrew_launch_access.dm"
 #include "voidcrew_launch_cargo.dm"
 #include "voidcrew_bank_deposits.dm"
 #include "voidcrew_cargo_cart.dm"
+#include "voidcrew_cargo_docking.dm"
 #include "voidcrew_cargo_load_queue.dm"
 #include "voidcrew_launch_fabrication.dm"
 #include "voidcrew_launch_progression.dm"
+#include "voidcrew_legion_cleanup.dm"
 #include "voidcrew_loot.dm"
 #include "voidcrew_map_packing.dm"
 #include "voidcrew_mapload_floor_dir.dm"
@@ -367,6 +375,7 @@
 #include "voidcrew_overmap_management.dm"
 #include "voidcrew_planet_cleanup.dm"
 #include "voidcrew_planet_definitions.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_planet_shared_air.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_plumbing_shuttle_move.dm"
 #include "voidcrew_missions.dm"
 #include "voidcrew_mining_input.dm"
@@ -387,6 +396,8 @@
 #include "voidcrew_nanite_research.dm"
 #include "voidcrew_research_lifecycle.dm"
 #include "voidcrew_research_movement.dm"
+#include "voidcrew_respawn_timer.dm"
+#include "voidcrew_rnd_kit.dm"
 #include "voidcrew_science_program.dm"
 #include "voidcrew_survey_research_links.dm"
 #include "voidcrew_survey_archive.dm"
@@ -402,12 +413,14 @@
 #include "voidcrew_ship_assembly.dm"
 #include "voidcrew_ship_communications.dm"
 #include "voidcrew_ship_hulls.dm"
+#include "voidcrew_ship_silicons.dm"
 #include "voidcrew_ship_integrity.dm"
 #include "voidcrew_ship_modules.dm"
 #include "voidcrew_ship_turret_targeting.dm"
 #include "voidcrew_shop_catalog.dm"
 #include "voidcrew_silicon_ship_systems.dm"
 #include "voidcrew_simple_mob_ai.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_slime_extract_piles.dm" // VOIDCREW EDIT ADDITION
 #include "voidcrew_smart_locker.dm"
 #include "voidcrew_vestige.dm"
 #include "voidcrew_vestige_abductor.dm"
@@ -433,6 +446,8 @@
 #include "weird_food.dm"
 #include "wizard_loadout.dm"
 #include "worn_icons.dm"
+#include "../../../voidcrew/modules/unit_tests/voidcrew_puzzle_containment.dm" // VOIDCREW EDIT ADDITION
+#include "../../../voidcrew/modules/unit_tests/armor_partial_modifiers.dm" // VOIDCREW EDIT ADDITION
 // END_INCLUDE
 #ifdef REFERENCE_TRACKING_DEBUG //Don't try and parse this file if ref tracking isn't turned on. IE: don't parse ref tracking please mr linter
 #include "find_reference_sanity.dm"

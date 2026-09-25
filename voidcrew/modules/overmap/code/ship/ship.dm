@@ -231,6 +231,8 @@
 		job_slot_definitions += get_module_job_definitions(source_template.type, upgrade_selections, slot_ids, selected_theme?.id)
 
 	job_slots = assemble_job_slots_from_list(job_slot_definitions)
+	for(var/datum/job/crew_job as anything in job_slots)
+		crew_job.crew_ship_ref = WEAKREF(src)
 
 	// Store initial slot counts for max slot calculations in cryo console
 	// This is an assoc list (job datum -> slot count), same format as job_slots
