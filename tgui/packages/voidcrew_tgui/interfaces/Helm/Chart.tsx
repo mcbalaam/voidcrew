@@ -53,6 +53,14 @@ const SHIP_TINT = '#e0a72c';
  */
 const LABEL_KINDS: ContactKind[] = ['ruin', 'planet', 'outpost'];
 
+const PLACE_KINDS: ContactKind[] = [
+  'planet',
+  'ruin',
+  'outpost',
+  'ship',
+  'distress',
+];
+
 /** 0 = up (north), clockwise. */
 const courseAngle = (dir: number) => {
   const vector = DIR_VECTOR[dir];
@@ -189,6 +197,26 @@ export const Chart = () => {
   // default; labels can crowd a busy map.
   const [showLabels, setShowLabels] = useState(false);
 
+  const labelled = (contact: Contact) =>
+    selected === contactKey(contact) ||
+    hovered === contactKey(contact) ||
+    contact.kind === 'ship' ||
+    (showLabels && LABEL_KINDS.includes(contact.kind));
+  const labelRows = new Map<string, number>();
+  const perTile = new Map<string, number>();
+  const placesFirst = [...contacts].sort(
+    (a, b) =>
+      Number(!PLACE_KINDS.includes(a.kind)) -
+      Number(!PLACE_KINDS.includes(b.kind)),
+  );
+  for (const contact of placesFirst) {
+    if (!labelled(contact)) continue;
+    const tile = `${contact.x},${contact.y}`;
+    const row = perTile.get(tile) ?? 0;
+    perTile.set(tile, row + 1);
+    labelRows.set(contactKey(contact), row);
+  }
+
   // Nodes anchor at the CENTRE of their tile, not its top-left corner.
   const toX = (tileX: number) => (tileX + 0.5) * TILE;
   const toY = (tileY: number) => (size - tileY - 0.5) * TILE;
@@ -261,9 +289,11 @@ export const Chart = () => {
         selected={isSelected}
         tooltip={contact.name}
         tooltipAlways={
+          isSelected ||
           contact.kind === 'ship' ||
           (showLabels && LABEL_KINDS.includes(contact.kind))
         }
+        tooltipRow={labelRows.get(keyRef) ?? 0}
         onClick={() => select(keyRef)}
         onContextMenu={(event) => {
           event.preventDefault();

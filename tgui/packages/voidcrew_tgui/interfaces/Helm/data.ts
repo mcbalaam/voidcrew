@@ -86,6 +86,7 @@ export type Engine = {
   fuel: number;
   maxFuel: number;
   enabled: BooleanLike;
+  blocked: BooleanLike;
   ref: string;
 };
 
@@ -137,12 +138,28 @@ export type DockOption = {
   /** REF() of the overmap object to dock with, or null for empty space. */
   ref: string | null;
   isEmpty: BooleanLike;
+  variant?: string;
+  /** Short action label when the contact's name is already displayed. */
+  label?: string;
+  /** Docking fee for this option in credits; 0 or absent when free or exempt. */
+  fee?: number;
+};
+
+export type DockFeeQuote = {
+  outpost: string;
+  ref: string;
+  variant: string;
+  amount: number;
+  /** The ship account's balance. */
+  balance: number;
+  canApprove: BooleanLike;
 };
 
 export type Data = {
   isViewer: BooleanLike;
   isNotCrew: BooleanLike;
   isAbandoned: BooleanLike;
+  isRetired: BooleanLike;
   shipInfo: { name: string; class: string; mass: number };
   chart: {
     size: number;
@@ -241,6 +258,7 @@ export type Data = {
   nebulaHideRemaining: number;
   canLand: BooleanLike;
   dockOptions: DockOption[];
+  dockFeeQuote?: DockFeeQuote | null;
   autopilot: Autopilot;
   /** This ship's own distress beacon. Everyone else's rides the contact set. */
   distress: {

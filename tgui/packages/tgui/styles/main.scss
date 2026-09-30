@@ -41,6 +41,8 @@
 @include meta.load-css('./interfaces/NuclearBomb.scss');
 @include meta.load-css('./interfaces/Orbit.scss');
 @include meta.load-css('./interfaces/OutpostManagement.scss');
+// VOIDCREW EDIT ADDITION - the prison warden console's styles live with the module.
+@include meta.load-css('../../voidcrew_tgui/styles/interfaces/OutpostPrison.scss');
 @include meta.load-css('./interfaces/OreSilo.scss');
 @include meta.load-css('./interfaces/Paper.scss');
 @include meta.load-css('./interfaces/PreferencesMenu.scss');

@@ -109,8 +109,9 @@
 	var/list/datum/mission/active_missions = list()
 	/// Maximum number of active missions (captain can adjust)
 	var/max_missions = DEFAULT_MAX_ACTIVE_MISSIONS
-	/// World time of the last manual mission refresh (rate-limited)
-	var/last_mission_refresh = 0
+	/// World time of the last manual mission refresh (rate-limited). Starts a whole cooldown back, so a
+	/// ship that never refreshed can, rather than waiting out the first minutes after the server boots.
+	var/last_mission_refresh = -MISSION_REFRESH_COOLDOWN
 
 
 	/// Weakref to the overmap site we're waiting on to finish generating (see
@@ -369,8 +370,8 @@
 	return // we don't want ships to endlessly drift in space
 
 /**
- * Minimalist ship notification - sends a styled chat message to all crew members.
- * Much less intrusive than ship_notify/priority_announce.
+ * Minimalist ship notification - sends a styled chat message to the crew members who
+ * are with the ship (see crewmate_near_ship()). Much less intrusive than priority_announce.
  *
  * Arguments:
  * * message - The notification message
@@ -378,8 +379,10 @@
  * * alert_level - SHIP_NOTIFY_NOTICE (blue), SHIP_NOTIFY_WARNING (orange), or SHIP_NOTIFY_DANGER (red)
  * * sound_file - Optional sound to play. If null, no sound is played.
  * * volume - Volume of the sound (0-100). Defaults to 100.
+ * * anywhere - Reach the whole crew wherever they are. For news relayed from somewhere
+ *   other than the ship, such as the crew's own outpost.
  */
-/obj/structure/overmap/ship/ship_notify(message, category = "ALERT", alert_level = SHIP_NOTIFY_NOTICE, sound_file = null, volume = 100)
+/obj/structure/overmap/ship/ship_notify(message, category = "ALERT", alert_level = SHIP_NOTIFY_NOTICE, sound_file = null, volume = 100, anywhere = FALSE)
 	var/formatted
 	switch(alert_level)
 		if(SHIP_NOTIFY_DANGER)
@@ -393,6 +396,8 @@
 		var/mob/crewmate = shipmate.current
 		if(!crewmate)
 			continue
+		if(!anywhere && !crewmate_near_ship(crewmate))
+			continue
 		to_chat(crewmate, formatted)
 		if(sound_file)
 			var/pref_volume = crewmate.client?.prefs.read_preference(/datum/preference/numeric/volume/sound_ship_ambience_volume)
@@ -401,6 +406,38 @@
 			var/sound/S = sound(sound_file)
 			S.volume = volume * (pref_volume / 100)
 			SEND_SOUND(crewmate, S)
+
+/**
+ * Whether a crewmate is with the ship, for its alerts: aboard it, or off it at the same
+ * place it is (the planet or ruin it is docked at, a spacewalk beside it, the ship it is
+ * docked with).
+ *
+ * The z-level alone is not enough. Ships share levels (docked together, parked at one
+ * planet, sitting in transit) and a packed level holds several unrelated sites, so a
+ * crewmate on a stranger's deck or at the encounter next door would still hear the
+ * docking chimes. Same scoping as the crew monitor (voidcrew/edits/machinery/crew_monitor.dm).
+ */
+/obj/structure/overmap/ship/proc/crewmate_near_ship(mob/crewmate)
+	var/turf/hull_turf = get_turf(shuttle)
+	if(!hull_turf)
+		return TRUE // No hull on the map to be near, so nobody can be away from it.
+	var/turf/crew_turf = get_turf(crewmate)
+	if(!crew_turf || crew_turf.z != hull_turf.z)
+		return FALSE
+	if(shuttle.is_in_shuttle_bounds(crew_turf))
+		return TRUE
+	// On another hull: only the one we are docked with (a boarding party) counts.
+	var/obj/docking_port/mobile/voidcrew/their_hull = voidcrew_crew_sensor_hull(crew_turf)
+	if(their_hull)
+		var/obj/structure/overmap/ship/their_ship = their_hull.current_ship
+		return !isnull(their_ship) && (docked == their_ship || their_ship.docked == src)
+	// Off every hull on our level: it has to be our site. Ground that resolves to no
+	// site (a hull built out past its footprint) gets the benefit of the doubt.
+	var/datum/our_site = map_region_for_turf(hull_turf)
+	var/datum/their_site = map_region_for_turf(crew_turf)
+	if(isnull(our_site) || isnull(their_site))
+		return TRUE
+	return our_site == their_site
 
 // ===== COMBAT TARGET API (see /obj/structure/overmap base hooks) =====
 

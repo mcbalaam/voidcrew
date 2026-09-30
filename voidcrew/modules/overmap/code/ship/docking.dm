@@ -27,12 +27,15 @@
   * * user - Mob that started the action
   * * object - Overmap object to act on
   */
-/obj/structure/overmap/ship/proc/overmap_object_act(mob/user, obj/structure/overmap/object, obj/structure/overmap/ship/optional_partner)
+/obj/structure/overmap/ship/proc/overmap_object_act(mob/user, obj/structure/overmap/object, obj/structure/overmap/ship/optional_partner, dock_variant)
 	if(!is_still() || state != OVERMAP_SHIP_FLYING)
 		to_chat(user, "<span class='warning'>Ship must be still to interact!</span>")
 		return
 
-	INVOKE_ASYNC(object, TYPE_PROC_REF(/obj/structure/overmap, ship_act), user, src, optional_partner)
+	if(istype(object, /obj/structure/overmap/dynamic/player_outpost))
+		INVOKE_ASYNC(object, TYPE_PROC_REF(/obj/structure/overmap/dynamic/player_outpost, ship_act), user, src, optional_partner, dock_variant)
+	else
+		INVOKE_ASYNC(object, TYPE_PROC_REF(/obj/structure/overmap, ship_act), user, src, optional_partner)
 
 /// How many one-second complete_dock() retries to spend waiting for the shuttle to
 /// physically finish a move before giving up and putting the ship back into a state the
@@ -492,6 +495,8 @@
 				// Start undock cooldown
 				COOLDOWN_START(src, undock_cooldown, UNDOCK_COOLDOWN_TIME)
 				SEND_SIGNAL(src, COMSIG_VOIDCREW_SHIP_DOCKED)
+				if(crash_dock_pending) // finish_crash_land() is waiting for this dock
+					on_crash_dock_complete()
 				// The counterpart to the "complete_dock UNDOCKING" line further down, whose
 				// absence is why a round-4 strand could not be diagnosed from the logs at all:
 				// 168 undock lines and not one for docking. The attempt count is the useful

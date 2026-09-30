@@ -38,6 +38,9 @@
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 1
 	},
+/obj/machinery/computer/nanite_cloud_controller{
+	dir = 2
+	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)
 "bRG" = (
@@ -95,23 +98,6 @@
 	},
 /area/template_noop)
 "gbZ" = (
-/obj/structure/table/glass,
-/obj/item/screwdriver{
-	pixel_w = -3;
-	pixel_z = 9
-	},
-/obj/item/stack/cable_coil{
-	pixel_w = -5;
-	pixel_z = 0
-	},
-/obj/item/assembly/timer{
-	pixel_w = 5;
-	pixel_z = 4
-	},
-/obj/item/assembly/timer{
-	pixel_w = 7;
-	pixel_z = -2
-	},
 /obj/effect/turf_decal/trimline/purple/filled/line{
 	dir = 9
 	},
@@ -122,6 +108,19 @@
 	dir = 1
 	},
 /obj/effect/turf_decal/tile/purple,
+/obj/structure/table/glass,
+/obj/item/assembly/timer{
+	pixel_w = -4;
+	pixel_z = 7
+	},
+/obj/item/assembly/timer{
+	pixel_w = 5;
+	pixel_z = 4
+	},
+/obj/item/reagent_containers/dropper{
+	pixel_w = -2;
+	pixel_z = -3
+	},
 /turf/open/floor/iron/dark/smooth_corner,
 /area/template_noop)
 "gVL" = (
@@ -167,6 +166,15 @@
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 1
 	},
+/obj/structure/table/glass,
+/obj/item/storage/box/disks_nanite{
+	pixel_w = -4;
+	pixel_z = 9
+	},
+/obj/item/storage/box/disks_nanite{
+	pixel_w = 6;
+	pixel_z = 5
+	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)
 "jPa" = (
@@ -175,9 +183,6 @@
 /turf/open/floor/iron/dark,
 /area/template_noop)
 "lXy" = (
-/obj/machinery/computer/nanite_cloud_controller{
-	dir = 2
-	},
 /obj/effect/turf_decal/trimline/purple/filled/line{
 	dir = 1
 	},
@@ -187,22 +192,18 @@
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 1
 	},
+/obj/structure/table/glass,
+/obj/item/screwdriver{
+	pixel_w = 0;
+	pixel_z = 9
+	},
+/obj/item/stack/cable_coil{
+	pixel_w = -1;
+	pixel_z = 0
+	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)
 "mLh" = (
-/obj/structure/table/glass,
-/obj/item/reagent_containers/cup/beaker/large{
-	pixel_w = -4;
-	pixel_z = 9
-	},
-/obj/item/reagent_containers/cup/beaker/large{
-	pixel_w = 6;
-	pixel_z = 2
-	},
-/obj/item/reagent_containers/dropper{
-	pixel_w = -2;
-	pixel_z = -3
-	},
 /obj/effect/turf_decal/trimline/purple/filled/line{
 	dir = 4
 	},
@@ -212,6 +213,15 @@
 /obj/machinery/firealarm/directional/north,
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 4
+	},
+/obj/structure/table/glass,
+/obj/item/reagent_containers/cup/beaker/large{
+	pixel_w = -4;
+	pixel_z = 9
+	},
+/obj/item/reagent_containers/cup/beaker/large{
+	pixel_w = 6;
+	pixel_z = 2
 	},
 /turf/open/floor/iron/dark/smooth_large,
 /area/template_noop)

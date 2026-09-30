@@ -167,6 +167,7 @@ type Engine = {
   fuel: number;
   maxFuel: number;
   enabled: BooleanLike;
+  blocked: BooleanLike;
   ref: string;
 };
 
@@ -218,12 +219,32 @@ type DockOption = {
   /** REF() of the overmap object to dock with, or null for empty space. */
   ref: string | null;
   isEmpty: BooleanLike;
+  variant?: string;
+  /** Short action label when the contact's name is already displayed. */
+  label?: string;
+  /** Docking fee for this option in credits; 0 or absent when free or exempt. */
+  fee?: number;
+};
+
+/**
+ * An outpost's docking fee waiting for approval. The captain (or, with no live
+ * captain, any crew) approves it here; the ship account pays on arrival.
+ */
+type DockFeeQuote = {
+  outpost: string;
+  ref: string;
+  variant: string;
+  amount: number;
+  /** The ship account's balance. */
+  balance: number;
+  canApprove: BooleanLike;
 };
 
 type Data = {
   isViewer: BooleanLike;
   isNotCrew: BooleanLike;
   isAbandoned: BooleanLike;
+  isRetired: BooleanLike;
   shipInfo: { name: string; class: string; mass: number };
   chart: {
     size: number;
@@ -322,6 +343,7 @@ type Data = {
   nebulaHideRemaining: number;
   canLand: BooleanLike;
   dockOptions: DockOption[];
+  dockFeeQuote?: DockFeeQuote | null;
   autopilot: Autopilot;
   /** This ship's own distress beacon. Everyone else's rides the contact set. */
   distress: {
@@ -358,7 +380,7 @@ const DIR_VECTOR: Record<number, [number, number]> = {
   10: [-1, -1],
 };
 
-/** Keyboard steering: event.code → the compass bit that key presses. */
+/** Keyboard steering: event.code â†’ the compass bit that key presses. */
 const KEY_AXIS: Record<string, number> = {
   KeyW: DIR.N,
   ArrowUp: DIR.N,
@@ -514,7 +536,7 @@ const canTravelDock = (contact: Contact) =>
 
 /**
  * Port of overmap_delta_to_compass() in ship_waypoints.dm: the 0.4142 is
- * tan(22.5°), which is what splits the compass into eight even sectors.
+ * tan(22.5Â°), which is what splits the compass into eight even sectors.
  *
  * Bearing and distance are derived from two positions the client already has, so
  * they are computed here rather than sent. That is what lets the charted table
@@ -941,8 +963,8 @@ const Faceplate = () => {
               >
                 {manualControl
                   ? windowFocused
-                    ? 'wasd · live'
-                    : 'wasd · armed'
+                    ? 'wasd Â· live'
+                    : 'wasd Â· armed'
                   : 'wasd'}
               </button>
             }
@@ -965,6 +987,7 @@ const Faceplate = () => {
               onClose={() => setMenu(null)}
             />
           )}
+          <DockFeeQuoteCard />
           {!!dockMenu && (
             <DockPickerMenu
               left={dockMenu.left}
@@ -1119,7 +1142,7 @@ const Ident = () => {
         )}
         <span className="Helm__shipClass">
           {shipInfo.class}
-          {!!shipInfo.mass && ` · ${shipInfo.mass}t`}
+          {!!shipInfo.mass && ` Â· ${shipInfo.mass}t`}
         </span>
       </div>
     </div>
@@ -1194,7 +1217,7 @@ const AlertStrip = () => {
     alerts.push([
       'crit',
       `Distress beacon active${
-        text ? `, ${text.length > 44 ? `${text.slice(0, 43)}…` : text}` : ''
+        text ? `, ${text.length > 44 ? `${text.slice(0, 43)}â€¦` : text}` : ''
       }`,
       text,
     ]);
@@ -1258,7 +1281,7 @@ const AlertStrip = () => {
     alerts.push([
       'info',
       `Autopilot, ${data.autopilot.label ?? 'selected destination'}${
-        data.autopilot.dockOnArrival ? ' · docking on arrival' : ''
+        data.autopilot.dockOnArrival ? ' Â· docking on arrival' : ''
       }`,
     ]);
   }
@@ -1294,7 +1317,7 @@ const AlertStrip = () => {
 
 // ---------------------------------------------------------------- left stack
 
-/** 75+ green, 61–74 amber, 51–60 red, 50 and under is the disabled threshold. */
+/** 75+ green, 61â€“74 amber, 51â€“60 red, 50 and under is the disabled threshold. */
 const hullColor = (value: number) => {
   if (value <= 50) return '#4a1410';
   if (value <= 60) return '#cf4a38';
@@ -1393,14 +1416,16 @@ const FuelStack = () => {
               <span
                 className="Helm__engineFuel"
                 style={{
-                  color: !engine.enabled
-                    ? '#3a474b'
-                    : percent < 40
-                      ? '#d9a230'
-                      : '#f2a341',
+                  color: engine.blocked
+                    ? '#cf4a38'
+                    : !engine.enabled
+                      ? '#3a474b'
+                      : percent < 40
+                        ? '#d9a230'
+                        : '#f2a341',
                 }}
               >
-                {percent}%
+                {engine.blocked ? 'Blocked' : `${percent}%`}
               </span>
             </div>
           );
@@ -1454,7 +1479,7 @@ const DriveGauge = () => {
           : throttled
             ? `Throttled to ${Math.round(speedMultiplier * 100)}%`
             : burning
-              ? `Burning · ${online} of ${engineInfo.length} drives`
+              ? `Burning Â· ${online} of ${engineInfo.length} drives`
               : `${online} of ${engineInfo.length} drives online`}
       </div>
     </div>
@@ -1825,12 +1850,24 @@ const ContactMenu = (props: {
   }
 
   if (contact?.dist === 0 && contact.target) {
+    const variants = (data.dockOptions ?? []).filter(
+      (option) => option.ref === contact.target && option.variant,
+    );
     items.push({
-      label: 'Interact',
+      label: variants.length ? 'Dock at hangar' : 'Interact',
       hint: 'Shares our position',
       disabled: locked,
       onClick: () => act('act_overmap', { ship_to_act: contact.target }),
     });
+    for (const option of variants) {
+      items.push({
+        label: option.label ?? option.name,
+        hint: feeHint(option.fee) ?? 'Dock for ship construction',
+        disabled: locked || state !== 'flying',
+        onClick: () =>
+          act('dock', { target: option.ref, variant: option.variant }),
+      });
+    }
   }
 
   const blocked =
@@ -1844,7 +1881,7 @@ const ContactMenu = (props: {
 
   if (!here) {
     items.push({
-      label: contact ? `Set course · ${contact.name}` : 'Set course here',
+      label: contact ? `Set course Â· ${contact.name}` : 'Set course here',
       hint: blocked ?? 'Avoids hazards in allowed zones',
       disabled: locked || !!blocked,
       onClick: () => act('autopilot', { x: tile.x, y: tile.y }),
@@ -1853,7 +1890,7 @@ const ContactMenu = (props: {
 
   if (contact && canTravelDock(contact)) {
     items.push({
-      label: `Travel & dock · ${contact.name}`,
+      label: `Travel & dock Â· ${contact.name}`,
       hint: blocked ?? 'Flies there, then begins docking',
       disabled: locked || !!blocked,
       onClick: () =>
@@ -1957,24 +1994,97 @@ const DockPickerMenu = (props: {
         event.stopPropagation();
       }}
     >
-      <div className="Helm__menuHead">Dock with…</div>
+      <div className="Helm__menuHead">Dock withâ€¦</div>
       {options.length === 0 ? (
         <div className="Helm__menuEmpty">Nothing to dock with</div>
       ) : (
         options.map((option) => (
           <button
-            key={option.ref ?? 'empty'}
+            key={`${option.ref ?? 'empty'}:${option.variant ?? 'default'}`}
             type="button"
             className="Helm__menuItem"
             onClick={() => {
-              act('dock', option.ref ? { target: option.ref } : {});
+              act('dock', option.ref ? { target: option.ref, variant: option.variant } : {});
               onClose();
             }}
           >
             <span className="Helm__menuLabel">{option.name}</span>
+            {!!feeHint(option.fee) && (
+              <span className="Helm__menuHint">{feeHint(option.fee)}</span>
+            )}
           </button>
         ))
       )}
+    </div>
+  );
+};
+
+/** "N cr" for a priced option, else undefined. */
+const feeHint = (fee?: number | null) =>
+  Number(fee) > 0 ? `${Number(fee)} cr` : undefined;
+
+/**
+ * A pending docking fee, pinned over the foot of the chart so the crew can keep
+ * flying while the captain decides. Approve re-sends the dock request itself.
+ */
+const DockFeeQuoteCard = () => {
+  const { act, data } = useBackend<Data>();
+  const locked = useLocked();
+  const quote = data.dockFeeQuote;
+  if (!quote?.ref) return null;
+  const amount = Number(quote.amount) || 0;
+  const balance = Number(quote.balance) || 0;
+  const short = balance < amount;
+  const approveTitle = !quote.canApprove
+    ? 'Captain only'
+    : short
+      ? 'Ship account short'
+      : undefined;
+  return (
+    <div
+      className="Helm__menu"
+      role="alertdialog"
+      aria-label="Docking fee"
+      style={{
+        left: `${((GEOMETRY.CHART.x + GEOMETRY.CHART.w / 2 - 150) / FRAME.w) * 100}%`,
+        top: `${((GEOMETRY.CHART.y + GEOMETRY.CHART.h - 150) / FRAME.h) * 100}%`,
+        width: `${(300 / FRAME.w) * 100}%`,
+        maxWidth: 'none',
+      }}
+    >
+      <div className="Helm__menuHead">{quote.outpost || 'Outpost'}</div>
+      <div style={{ padding: '0.6cqw 0.7cqw' }}>
+        <div className="Helm__cardName">Docking fee {amount} cr</div>
+        {short ? (
+          <div className="Helm__cardMeta">Ship account short.</div>
+        ) : null}
+        <div className="Helm__overlayActions">
+          <button
+            type="button"
+            className="Helm__btn"
+            disabled={locked || !quote.canApprove}
+            title={approveTitle}
+            onClick={() =>
+              act('approve_dock_fee', {
+                ref: quote.ref,
+                variant: quote.variant,
+                amount,
+              })
+            }
+          >
+            Approve
+          </button>
+          <button
+            type="button"
+            className="Helm__btn"
+            disabled={locked || !quote.canApprove}
+            title={quote.canApprove ? undefined : 'Captain only'}
+            onClick={() => act('decline_dock_fee', { ref: quote.ref })}
+          >
+            Decline
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -2417,7 +2527,7 @@ const ContactList = () => {
         .map((category) => (
           <div key={category}>
             <div className="Helm__cat">
-              {category} · {groups[category].length}
+              {category} Â· {groups[category].length}
             </div>
             {collapse(groups[category]).map(({ contact, count, refs }) => {
               const key = contactKey(contact);
@@ -2439,12 +2549,12 @@ const ContactList = () => {
                   }`}
                   title={
                     contact.sos
-                      ? `Distress beacon: "${contact.sosMessage ?? 'no message'}" · nothing verifies this · right-click to set course`
+                      ? `Distress beacon: "${contact.sosMessage ?? 'no message'}" Â· nothing verifies this Â· right-click to set course`
                       : contact.kind === 'ship' && !contact.identified
                         ? 'Unidentified vessel, right-click for actions, or run a Ships scan to resolve it'
                         : contact.hazard
-                          ? `${contact.hazard} · right-click to set course`
-                          : 'Bring it up on the chart · right-click to set course'
+                          ? `${contact.hazard} Â· right-click to set course`
+                          : 'Bring it up on the chart Â· right-click to set course'
                   }
                   /*
                    * Highlight it and take the chart to it. A charted contact can
@@ -2473,7 +2583,7 @@ const ContactList = () => {
                   <span className="Helm__rowName">
                     {contact.name}
                     {count > 1 && (
-                      <span className="Helm__rowCount"> ×{count}</span>
+                      <span className="Helm__rowCount"> Ã—{count}</span>
                     )}
                   </span>
                   <span className="Helm__rowDist">
@@ -2484,10 +2594,10 @@ const ContactList = () => {
                   <span className="Helm__rowCoord">
                     {String(contact.x).padStart(2, '0')} /{' '}
                     {String(contact.y).padStart(2, '0')}
-                    {!!eta && ` · ${eta} out`}
-                    {count > 1 && ' · nearest'}
+                    {!!eta && ` Â· ${eta} out`}
+                    {count > 1 && ' Â· nearest'}
                     {contact.integrity != null &&
-                      ` · hull ${contact.integrity}%`}
+                      ` Â· hull ${contact.integrity}%`}
                     {!locked && (
                       <button
                         type="button"
@@ -2511,6 +2621,7 @@ const ContactList = () => {
                    */}
                   {selected === key && !locked && (
                     <div className="Helm__rowActions">
+                      <DockVariantButtons target={contact.target} />
                       {contact.dist > 0 && (
                         <button
                           type="button"
@@ -2592,12 +2703,41 @@ const AtLocation = () => {
             }
             onClick={() => act('act_overmap', { ship_to_act: object.ref })}
           >
-            Interact
+            {(data.dockOptions ?? []).some(
+              (option) => option.ref === object.ref && option.variant,
+            )
+              ? 'Dock at hangar'
+              : 'Interact'}
           </button>
+          <DockVariantButtons target={object.ref} />
         </div>
       ))}
     </>
   );
+};
+
+/** Keep alternate berths reachable from the contact controls as well as Dock. */
+const DockVariantButtons = (props: { target?: string | null }) => {
+  const { act, data } = useBackend<Data>();
+  const locked = useLocked();
+  return (data.dockOptions ?? [])
+    .filter((option) => option.ref === props.target && option.variant)
+    .map((option) => (
+      <button
+        key={`${option.ref}:${option.variant}`}
+        type="button"
+        className="Helm__btn"
+        disabled={locked || data.state !== 'flying'}
+        title={feeHint(option.fee) ?? 'Dock for ship construction'}
+        onClick={(event) => {
+          event.stopPropagation();
+          act('dock', { target: option.ref, variant: option.variant });
+        }}
+      >
+        {option.label ?? option.name}
+        {Number(option.fee) > 0 ? ` Â· ${Number(option.fee)} cr` : ''}
+      </button>
+    ));
 };
 
 const Comms = () => {
@@ -2651,7 +2791,7 @@ const Comms = () => {
       )}
       <Input
         fluid
-        placeholder="Hail vessels in sight…"
+        placeholder="Hail vessels in sightâ€¦"
         value={message}
         disabled={locked}
         onChange={(value) => {
@@ -3020,7 +3160,7 @@ const VelocityCluster = () => {
             {!!showCruiseTarget && (
               <span style={{ fontSize: '0.8cqw', color: '#7d8f94' }}>
                 {' '}
-                → {cruiseTargetSpeed.toFixed(1)} t/min
+                â†’ {cruiseTargetSpeed.toFixed(1)} t/min
               </span>
             )}
           </span>
@@ -3104,7 +3244,7 @@ const OpsRow = () => {
   const primaryDockOption = options[0];
   const dockName = primaryDockOption?.name ?? 'empty space';
   const runDock = (option?: DockOption) =>
-    act('dock', option?.ref ? { target: option.ref } : {});
+    act('dock', option?.ref ? { target: option.ref, variant: option.variant } : {});
 
   const undockDisabled =
     (state !== 'idle' && state !== 'undocking') ||
@@ -3167,9 +3307,11 @@ const OpsRow = () => {
         ? 'Auto-stop and hold position here in empty space'
         : 'Hold position here in empty space';
     }
-    return autoStopping
+    const fee = feeHint(primaryDockOption?.fee);
+    const reason = autoStopping
       ? `Auto-stop and dock with ${dockName}`
       : `Dock with ${dockName}`;
+    return fee ? `${reason} (${fee})` : reason;
   };
 
   return (
@@ -3190,7 +3332,7 @@ const OpsRow = () => {
                   : cargoShuttlePresent
                     ? 'shuttle aboard'
                     : manoeuvring
-                      ? `${state}…`
+                      ? `${state}â€¦`
                       : 'moorings'
         }
         path="M9 4h6v4h5v12H4V8h5V4zm3 5v7m0 0l-3-3m3 3l3-3"
@@ -3210,7 +3352,7 @@ const OpsRow = () => {
           dockWarmup
             ? `${deciToSeconds(dockWarmupRemaining)}s`
             : manoeuvring
-              ? `${state}…`
+              ? `${state}â€¦`
               : multipleDockOptions
                 ? `${options.length} options`
                 : dockName
@@ -3341,16 +3483,20 @@ const AbandonedOverlay = () => {
   return (
     <div className="Helm__overlay Helm--prompt">
       <div className="Helm__overlayBox">
-        <div className="Helm__overlayTitle">Vessel abandoned</div>
+        <div className="Helm__overlayTitle">
+          {data.isRetired ? 'Hull retired' : 'Vessel abandoned'}
+        </div>
         <div className="Helm__overlayDesc">
-          No command authorization is registered to this ship. Claiming it makes
-          you its commanding officer.
+          {data.isRetired
+            ? 'This hull has been retired or reserved for replacement by its registry.'
+            : 'No command authorization is registered to this ship. Claiming it makes you its commanding officer.'}
         </div>
         <div className="Helm__overlayActions">
           <button
             type="button"
             className="Helm__btn"
             onClick={() => act('claim_abandoned')}
+            disabled={!!data.isRetired}
           >
             Claim this ship
           </button>

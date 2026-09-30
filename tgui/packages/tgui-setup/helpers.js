@@ -382,6 +382,7 @@
 // ------------------------------------------------------
 
 window.onerror = function (msg, url, line, col, error) {
+  // VOIDCREW EDIT ADDITION START
   // Chrome reports the ResizeObserver delivery loop as an error even though it
   // is only a diagnostic: the callback changed layout again before the browser
   // finished delivering resize notifications. It is not an exception, the
@@ -394,6 +395,7 @@ window.onerror = function (msg, url, line, col, error) {
   ) {
     return true;
   }
+  // VOIDCREW EDIT ADDITION END
   window.onerror.errorCount = (window.onerror.errorCount || 0) + 1;
   // Proper stacktrace
   var stack = error && error.stack;

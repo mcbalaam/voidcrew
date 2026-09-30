@@ -59,7 +59,7 @@ type PurchaseTarget = {
   part_cost?: Partial<PartsInventory>;
 };
 
-type UpgradeModule = {
+export type UpgradeModule = {
   id: string;
   name: string;
   desc: string;
@@ -67,7 +67,7 @@ type UpgradeModule = {
   is_default: boolean;
 };
 
-type UpgradeSlot = {
+export type UpgradeSlot = {
   key: string;
   display_name: string;
   modules: UpgradeModule[];
@@ -91,13 +91,13 @@ type HullPreview = {
   slots: Record<string, [number, number]>;
 };
 
-type PreviewData = {
+export type PreviewData = {
   tile_px: number;
   hulls: Record<string, HullPreview>;
   modules: Record<string, ModulePreview>;
 };
 
-type HoverModule = {
+export type HoverModule = {
   slot: string;
   moduleId: string;
 };
@@ -1098,7 +1098,7 @@ const PartsStrip = (props: { parts: PartsInventory }) => (
  * each upgrade slot overlaid at its slot marker position, exactly as the
  * modular map loader will place it in-game.
  */
-const ShipPreview = (props: {
+export const ShipPreview = (props: {
   preview: PreviewData;
   themeKey: string;
   slots: UpgradeSlot[];

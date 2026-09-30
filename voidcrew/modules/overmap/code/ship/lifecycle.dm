@@ -18,6 +18,7 @@
 /obj/structure/overmap/ship/proc/abandon_ship(crash = TRUE)
 	if(abandoned)
 		return // Already abandoned
+	ship_metric_abandoned(src)
 
 	abandoned = TRUE
 	abandoned_at = world.time // starts the derelict-despawn clock (SSovermap.sweep_derelicts)
@@ -76,10 +77,14 @@
  * * claimer - The mob claiming the ship
  */
 /obj/structure/overmap/ship/proc/claim_abandoned_ship(mob/living/claimer)
+	if(retired_by_checkpoint || checkpoint_rebuilding)
+		to_chat(claimer, span_warning("This ship is retired or being rebuilt from a checkpoint."))
+		return FALSE
 	if(!abandoned)
 		return FALSE
 	if(!claimer?.mind)
 		return FALSE
+	ship_metric_claimed_abandoned(src, claimer)
 
 	// Reset abandoned state, stopping the derelict-despawn clock
 	abandoned = FALSE
@@ -235,6 +240,7 @@
 /// Otherwise its unexpected-deletion stack trace aborts callers inside try/catch,
 /// leaving a hull-less overmap ship behind that continues to pin its landing site.
 /obj/structure/overmap/ship/proc/detach_shuttle()
+	ship_metric_removed(src) // the last moment the hull still has its metrics id
 	var/obj/docking_port/mobile/voidcrew/owned_shuttle = shuttle
 	shuttle = null
 	if(owned_shuttle?.current_ship == src)
