@@ -1317,7 +1317,7 @@ $caption: 1.6cqw;
 }
 
 // Bounded so the edge-clamp in openMenu() has a width it can actually rely on,
-// "Set course Â· <contact name>" is otherwise as wide as the longest ship name
+// "Set course · <contact name>" is otherwise as wide as the longest ship name
 // anyone has typed.
 .Helm__menu {
   position: absolute;
@@ -1341,7 +1341,7 @@ $caption: 1.6cqw;
 }
 
 // Label over hint rather than side by side: the menu is width-bounded and
-// "Set course Â· <contact name>" plus its hint does not fit on one line.
+// "Set course · <contact name>" plus its hint does not fit on one line.
 .Helm__menuItem {
   display: flex;
   flex-direction: column;

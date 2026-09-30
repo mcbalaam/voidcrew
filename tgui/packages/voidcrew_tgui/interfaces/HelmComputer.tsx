@@ -380,7 +380,7 @@ const DIR_VECTOR: Record<number, [number, number]> = {
   10: [-1, -1],
 };
 
-/** Keyboard steering: event.code â†’ the compass bit that key presses. */
+/** Keyboard steering: event.code → the compass bit that key presses. */
 const KEY_AXIS: Record<string, number> = {
   KeyW: DIR.N,
   ArrowUp: DIR.N,
@@ -536,7 +536,7 @@ const canTravelDock = (contact: Contact) =>
 
 /**
  * Port of overmap_delta_to_compass() in ship_waypoints.dm: the 0.4142 is
- * tan(22.5Â°), which is what splits the compass into eight even sectors.
+ * tan(22.5°), which is what splits the compass into eight even sectors.
  *
  * Bearing and distance are derived from two positions the client already has, so
  * they are computed here rather than sent. That is what lets the charted table
@@ -963,8 +963,8 @@ const Faceplate = () => {
               >
                 {manualControl
                   ? windowFocused
-                    ? 'wasd Â· live'
-                    : 'wasd Â· armed'
+                    ? 'wasd · live'
+                    : 'wasd · armed'
                   : 'wasd'}
               </button>
             }
@@ -1142,7 +1142,7 @@ const Ident = () => {
         )}
         <span className="Helm__shipClass">
           {shipInfo.class}
-          {!!shipInfo.mass && ` Â· ${shipInfo.mass}t`}
+          {!!shipInfo.mass && ` · ${shipInfo.mass}t`}
         </span>
       </div>
     </div>
@@ -1217,7 +1217,7 @@ const AlertStrip = () => {
     alerts.push([
       'crit',
       `Distress beacon active${
-        text ? `, ${text.length > 44 ? `${text.slice(0, 43)}â€¦` : text}` : ''
+        text ? `, ${text.length > 44 ? `${text.slice(0, 43)}…` : text}` : ''
       }`,
       text,
     ]);
@@ -1281,7 +1281,7 @@ const AlertStrip = () => {
     alerts.push([
       'info',
       `Autopilot, ${data.autopilot.label ?? 'selected destination'}${
-        data.autopilot.dockOnArrival ? ' Â· docking on arrival' : ''
+        data.autopilot.dockOnArrival ? ' · docking on arrival' : ''
       }`,
     ]);
   }
@@ -1317,7 +1317,7 @@ const AlertStrip = () => {
 
 // ---------------------------------------------------------------- left stack
 
-/** 75+ green, 61â€“74 amber, 51â€“60 red, 50 and under is the disabled threshold. */
+/** 75+ green, 61–74 amber, 51–60 red, 50 and under is the disabled threshold. */
 const hullColor = (value: number) => {
   if (value <= 50) return '#4a1410';
   if (value <= 60) return '#cf4a38';
@@ -1479,7 +1479,7 @@ const DriveGauge = () => {
           : throttled
             ? `Throttled to ${Math.round(speedMultiplier * 100)}%`
             : burning
-              ? `Burning Â· ${online} of ${engineInfo.length} drives`
+              ? `Burning · ${online} of ${engineInfo.length} drives`
               : `${online} of ${engineInfo.length} drives online`}
       </div>
     </div>
@@ -1881,7 +1881,7 @@ const ContactMenu = (props: {
 
   if (!here) {
     items.push({
-      label: contact ? `Set course Â· ${contact.name}` : 'Set course here',
+      label: contact ? `Set course · ${contact.name}` : 'Set course here',
       hint: blocked ?? 'Avoids hazards in allowed zones',
       disabled: locked || !!blocked,
       onClick: () => act('autopilot', { x: tile.x, y: tile.y }),
@@ -1890,7 +1890,7 @@ const ContactMenu = (props: {
 
   if (contact && canTravelDock(contact)) {
     items.push({
-      label: `Travel & dock Â· ${contact.name}`,
+      label: `Travel & dock · ${contact.name}`,
       hint: blocked ?? 'Flies there, then begins docking',
       disabled: locked || !!blocked,
       onClick: () =>
@@ -1994,7 +1994,7 @@ const DockPickerMenu = (props: {
         event.stopPropagation();
       }}
     >
-      <div className="Helm__menuHead">Dock withâ€¦</div>
+      <div className="Helm__menuHead">Dock with…</div>
       {options.length === 0 ? (
         <div className="Helm__menuEmpty">Nothing to dock with</div>
       ) : (
@@ -2527,7 +2527,7 @@ const ContactList = () => {
         .map((category) => (
           <div key={category}>
             <div className="Helm__cat">
-              {category} Â· {groups[category].length}
+              {category} · {groups[category].length}
             </div>
             {collapse(groups[category]).map(({ contact, count, refs }) => {
               const key = contactKey(contact);
@@ -2549,12 +2549,12 @@ const ContactList = () => {
                   }`}
                   title={
                     contact.sos
-                      ? `Distress beacon: "${contact.sosMessage ?? 'no message'}" Â· nothing verifies this Â· right-click to set course`
+                      ? `Distress beacon: "${contact.sosMessage ?? 'no message'}" · nothing verifies this · right-click to set course`
                       : contact.kind === 'ship' && !contact.identified
                         ? 'Unidentified vessel, right-click for actions, or run a Ships scan to resolve it'
                         : contact.hazard
-                          ? `${contact.hazard} Â· right-click to set course`
-                          : 'Bring it up on the chart Â· right-click to set course'
+                          ? `${contact.hazard} · right-click to set course`
+                          : 'Bring it up on the chart · right-click to set course'
                   }
                   /*
                    * Highlight it and take the chart to it. A charted contact can
@@ -2583,7 +2583,7 @@ const ContactList = () => {
                   <span className="Helm__rowName">
                     {contact.name}
                     {count > 1 && (
-                      <span className="Helm__rowCount"> Ã—{count}</span>
+                      <span className="Helm__rowCount"> ×{count}</span>
                     )}
                   </span>
                   <span className="Helm__rowDist">
@@ -2594,10 +2594,10 @@ const ContactList = () => {
                   <span className="Helm__rowCoord">
                     {String(contact.x).padStart(2, '0')} /{' '}
                     {String(contact.y).padStart(2, '0')}
-                    {!!eta && ` Â· ${eta} out`}
-                    {count > 1 && ' Â· nearest'}
+                    {!!eta && ` · ${eta} out`}
+                    {count > 1 && ' · nearest'}
                     {contact.integrity != null &&
-                      ` Â· hull ${contact.integrity}%`}
+                      ` · hull ${contact.integrity}%`}
                     {!locked && (
                       <button
                         type="button"
@@ -2735,7 +2735,7 @@ const DockVariantButtons = (props: { target?: string | null }) => {
         }}
       >
         {option.label ?? option.name}
-        {Number(option.fee) > 0 ? ` Â· ${Number(option.fee)} cr` : ''}
+        {Number(option.fee) > 0 ? ` · ${Number(option.fee)} cr` : ''}
       </button>
     ));
 };
@@ -2791,7 +2791,7 @@ const Comms = () => {
       )}
       <Input
         fluid
-        placeholder="Hail vessels in sightâ€¦"
+        placeholder="Hail vessels in sight…"
         value={message}
         disabled={locked}
         onChange={(value) => {
@@ -3160,7 +3160,7 @@ const VelocityCluster = () => {
             {!!showCruiseTarget && (
               <span style={{ fontSize: '0.8cqw', color: '#7d8f94' }}>
                 {' '}
-                â†’ {cruiseTargetSpeed.toFixed(1)} t/min
+                → {cruiseTargetSpeed.toFixed(1)} t/min
               </span>
             )}
           </span>
@@ -3332,7 +3332,7 @@ const OpsRow = () => {
                   : cargoShuttlePresent
                     ? 'shuttle aboard'
                     : manoeuvring
-                      ? `${state}â€¦`
+                      ? `${state}…`
                       : 'moorings'
         }
         path="M9 4h6v4h5v12H4V8h5V4zm3 5v7m0 0l-3-3m3 3l3-3"
@@ -3352,7 +3352,7 @@ const OpsRow = () => {
           dockWarmup
             ? `${deciToSeconds(dockWarmupRemaining)}s`
             : manoeuvring
-              ? `${state}â€¦`
+              ? `${state}…`
               : multipleDockOptions
                 ? `${options.length} options`
                 : dockName
