@@ -13,13 +13,15 @@ $steel-900: #0b0e0f;
 $steel-800: #161c1e;
 $steel-700: #1d2528;
 $steel-600: #2a3438;
-$steel-500: #5a6e74;
+$steel-500: #5a6e74; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
 $well: #05090a;
 $amber: #f2a341;
 $amber-dim: #8a5f26;
 $ice: #74c8dd;
+// VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
 $ice-dim: #7ba0ac;
 $label: #aebfc4;
+// VOIDCREW EDIT END
 $good: #59b871;
 $warn: #d9a230;
 $crit: #cf4a38;
@@ -28,7 +30,7 @@ $crit: #cf4a38;
 $sos: #ff4d6d;
 
 $stencil:
-  'Adwaita Mono', 'Helvetica Neue', 'Liberation Sans Narrow', sans-serif;
+  'Adwaita Mono', 'Helvetica Neue', 'Liberation Sans Narrow', sans-serif; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
 $mono: ui-monospace, 'Cascadia Mono', 'Consolas', 'Liberation Mono', monospace;
 
 .Helm {
@@ -195,6 +197,7 @@ $caption: 1.6cqw;
   white-space: nowrap;
 }
 
+// VOIDCREW EDIT - Helm faceplate layout no longer uses these styles.
 // A control in a well caption (the manual-control switch on the Helm panel).
 // The caption is only $caption tall, so the base button chrome is squeezed to
 // fit inside it; the auto margin holds it against the right edge, clear of the
@@ -359,11 +362,13 @@ $caption: 1.6cqw;
 // min-width: 0 lets the slot shrink below its content width at all, otherwise
 // a long name pushes the rest of the plate off the bezel instead of giving way.
 .Helm__identName {
-  display: flex;
+  display: flex; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   flex: 1 1 auto;
+  // VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
   flex-direction: column;
   justify-content: center;
   gap: 0.12cqw;
+  // VOIDCREW EDIT END
   min-width: 0;
   overflow: hidden;
 }
@@ -381,7 +386,7 @@ $caption: 1.6cqw;
   background: none;
   color: #d6e2e4;
   font-family: $stencil;
-  font-size: calc(1.4cqw * var(--helm-name-scale));
+  font-size: calc(1.4cqw * var(--helm-name-scale)); // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   letter-spacing: 0.06em;
   text-align: left;
   text-overflow: ellipsis;
@@ -407,11 +412,11 @@ $caption: 1.6cqw;
 // clipped to the same width and ellipsises rather than spilling across the
 // bezel; the name itself is what the crew reads off the plate.
 .Helm__shipClass {
-  flex: none;
+  flex: none; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   min-width: 0;
   overflow: hidden;
   color: $label;
-  font-size: 0.7cqw;
+  font-size: 0.7cqw; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   letter-spacing: 0.14em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -770,6 +775,7 @@ $caption: 1.6cqw;
   }
 }
 
+// VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
 // The chart body is the same inset:0 absolute panel body as .Helm__viewport,
 // but without the pan cursor or the blanket SVG sizing, which HelmPlane owns
 // now. .Helm__well--labelled pushes its top below the caption (see above), so
@@ -779,12 +785,14 @@ $caption: 1.6cqw;
   inset: 0;
 }
 
+// VOIDCREW EDIT END
 .Helm__hud {
   position: absolute;
   pointer-events: none;
   font-family: $mono;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
+// VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
 
   &.Helm__hud--row {
     display: flex;
@@ -795,6 +803,7 @@ $caption: 1.6cqw;
       margin-bottom: 0;
     }
   }
+// VOIDCREW EDIT END
 
   &.Helm--tl {
     top: 0.8cqw;
@@ -842,6 +851,7 @@ $caption: 1.6cqw;
   letter-spacing: 0.14em;
 }
 
+// VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
 .Helm__readouts {
   display: grid;
   grid-template-columns: max-content max-content;
@@ -850,10 +860,12 @@ $caption: 1.6cqw;
   row-gap: 0.15cqw;
 }
 
+// VOIDCREW EDIT END
 .Helm__hudBig {
   color: $ice;
   font-size: 2cqw;
   line-height: 1.1;
+// VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
 }
 
 // Full-width control strip along the bottom of the chart: HelmPlane's own zoom
@@ -931,6 +943,7 @@ $caption: 1.6cqw;
   .HelmPlane__Controls--main {
     gap: 0.3cqw;
   }
+// VOIDCREW EDIT END
 }
 
 .Helm__zoomRow {
@@ -1014,6 +1027,7 @@ $caption: 1.6cqw;
   }
 }
 
+// VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
 // The autopilot destination pip spins, so a course being flown reads apart from
 // a mere projection at a glance. The plane scales the node; this only rotates.
 .Helm__reticle {
@@ -1058,6 +1072,7 @@ $caption: 1.6cqw;
   white-space: nowrap;
 }
 
+// VOIDCREW EDIT END
 .Helm__course {
   display: flex;
   align-items: center;
@@ -1071,32 +1086,36 @@ $caption: 1.6cqw;
   overflow: hidden;
   color: $good;
   font-family: $stencil;
+  // VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
   font-size: 0.9cqw;
   margin-left: 0.6em;
   letter-spacing: 0.06em;
+  // VOIDCREW EDIT END
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
-  margin-top: 0.3cqw;
+  margin-top: 0.3cqw; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
 }
 
 .Helm__courseDist {
   color: $label;
   font-family: $mono;
-  font-size: 1cqw;
+  font-size: 1cqw; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   font-variant-numeric: tabular-nums;
+  // VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
   margin-top: 0.3cqw;
   margin-right: 0.2em;
+  // VOIDCREW EDIT END
 }
 
 .Helm__courseStatus {
   margin-top: 0.3cqw;
-  color: $label;
+  color: $label; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   font-family: $mono;
-  font-size: 1cqw;
+  font-size: 1cqw; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  margin-left: 0.6em;
+  margin-left: 0.6em; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
 }
 
 .Helm__zoneControls {
@@ -1108,7 +1127,7 @@ $caption: 1.6cqw;
   margin-bottom: 0.35cqw;
   color: $ice-dim;
   font-family: $mono;
-  font-size: 1cqw;
+  font-size: 1cqw; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   letter-spacing: 0.08em;
 }
 
@@ -1119,7 +1138,7 @@ $caption: 1.6cqw;
 
 .Helm__zoneButton {
   min-width: 10cqw;
-  padding: 0.45cqw 0.3cqw 0.45cqw 0.6cqw;
+  padding: 0.45cqw 0.3cqw 0.45cqw 0.6cqw; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   border: 1px solid $steel-700;
   border-top: 2px solid;
   border-radius: 2px;
@@ -1129,8 +1148,10 @@ $caption: 1.6cqw;
   text-align: left;
   cursor: pointer;
 
+  // VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
   &:hover,
   &:focus-visible {
+  // VOIDCREW EDIT END
     background: $steel-800;
     outline: 1px solid $ice-dim;
   }
@@ -1296,7 +1317,7 @@ $caption: 1.6cqw;
 }
 
 // Bounded so the edge-clamp in openMenu() has a width it can actually rely on,
-// "Set course · <contact name>" is otherwise as wide as the longest ship name
+// "Set course Â· <contact name>" is otherwise as wide as the longest ship name
 // anyone has typed.
 .Helm__menu {
   position: absolute;
@@ -1320,7 +1341,7 @@ $caption: 1.6cqw;
 }
 
 // Label over hint rather than side by side: the menu is width-bounded and
-// "Set course · <contact name>" plus its hint does not fit on one line.
+// "Set course Â· <contact name>" plus its hint does not fit on one line.
 .Helm__menuItem {
   display: flex;
   flex-direction: column;
@@ -1791,7 +1812,7 @@ $caption: 1.6cqw;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  color: $label;
+  color: $label; // VOIDCREW EDIT - HelmPlane chart and helm faceplate styling.
   font-family: $mono;
   font-size: 0.78cqw;
 }
@@ -1872,18 +1893,22 @@ $caption: 1.6cqw;
   position: absolute;
   inset: 0;
   display: flex;
+  // VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
   flex-direction: column;
   align-items: stretch;
   gap: 0.4cqw;
+  // VOIDCREW EDIT END
   padding: 0.9cqw;
 }
 
 .Helm__velBig {
   display: flex;
+  // VOIDCREW EDIT START - HelmPlane chart and helm faceplate styling.
   flex-direction: row;
   align-items: baseline;
   gap: 0.5cqw;
   min-width: 0;
+  // VOIDCREW EDIT END
 }
 
 .Helm__velValue {

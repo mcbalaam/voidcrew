@@ -189,6 +189,7 @@
 	if(!extension_at)
 		return "[base_file]_[theme_id].dmm"
 	return "[copytext(base_file, 1, extension_at)]_[theme_id].dmm"
+// VOIDCREW EDIT START - Voidcrew test compatibility with static checks.
 
 /**
  * Public shims for the protected item-interaction entry points.
@@ -205,3 +206,4 @@
 
 /atom/proc/vc_test_base_ranged_item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	return base_ranged_item_interaction(user, tool, modifiers)
+// VOIDCREW EDIT END
