@@ -7543,6 +7543,7 @@
 #include "voidcrew\modules\shuttle\survey\survey_designs.dm"
 #include "voidcrew\modules\slime_extract_piles\slime_extract_piles.dm"
 #include "voidcrew\modules\storage\smart_locker.dm"
+#include "voidcrew\modules\storage\wall_locker.dm"
 #include "voidcrew\modules\surgery\experimental_dissection.dm"
 #include "voidcrew\modules\teams\_team.dm"
 #include "voidcrew\modules\trade\blueprint_imprinter.dm"
